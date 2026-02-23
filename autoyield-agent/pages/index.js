@@ -5,6 +5,7 @@ import DecisionPanel from '../components/DecisionPanel';
 import ApprovalPanel from '../components/ApprovalPanel';
 import RulesPanel from '../components/RulesPanel';
 import HistoryTable from '../components/HistoryTable';
+import TelegramPanel from '../components/TelegramPanel';
 
 export default function Dashboard() {
   const [state, setState] = useState(null);
@@ -137,6 +138,7 @@ export default function Dashboard() {
       </div>
 
       <RulesPanel rules={rules} onSave={handleSaveRules} />
+      <TelegramPanel />
       <HistoryTable history={history} />
     </div>
   );

@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 
 const HISTORY_FILE = path.join(process.cwd(), 'data', 'aprHistory.json');
-const MAX_SNAPSHOTS = 12;
+const MAX_SNAPSHOTS = 24; // increased window for multi-protocol tracking
 
 export function getHistory() {
   try {
@@ -14,10 +14,33 @@ export function getHistory() {
 
 export function appendSnapshot(snapshot) {
   const history = getHistory();
-  history.push(snapshot);
+  const normalized = normalizeSnapshot(snapshot);
+  history.push(normalized);
   const trimmed = history.slice(-MAX_SNAPSHOTS);
   fs.writeFileSync(HISTORY_FILE, JSON.stringify(trimmed, null, 2));
   return trimmed;
+}
+
+// Handle both old { aaveAPR, compoundAPR } and new { aprs, best, bestAPR } formats
+function normalizeSnapshot(s) {
+  if (s.aprs) return s; // already new format
+  // Legacy format migration
+  const aprs = {};
+  if (s.aaveAPR != null) aprs['aave'] = s.aaveAPR;
+  if (s.compoundAPR != null) aprs['compound'] = s.compoundAPR;
+  const bestAPR = Math.max(s.aaveAPR || 0, s.compoundAPR || 0);
+  const best = (s.aaveAPR || 0) >= (s.compoundAPR || 0) ? 'aave' : 'compound';
+  return { aprs, best, bestAPR, timestamp: s.timestamp };
+}
+
+// Delta array: (best available APR minus current protocol's APR) per snapshot
+// Measures the opportunity cost of staying in the current protocol over time
+export function getDeltaHistory(history, currentProtocol) {
+  return history.map(h => {
+    const s = normalizeSnapshot(h);
+    const currentAPR = s.aprs[currentProtocol] ?? 0;
+    return s.bestAPR - currentAPR;
+  });
 }
 
 // Exponential Moving Average
@@ -39,17 +62,12 @@ export function computeStdDev(values) {
   return Math.sqrt(variance);
 }
 
-// Get delta array from history: compoundAPR - aaveAPR for each snapshot
-export function getDeltaHistory(history) {
-  return history.map(h => h.compoundAPR - h.aaveAPR);
-}
-
-export function computeEmaDelta(history, window = 6) {
-  const deltas = getDeltaHistory(history);
+export function computeEmaDelta(history, currentProtocol, window = 6) {
+  const deltas = getDeltaHistory(history, currentProtocol);
   return computeEMA(deltas, window);
 }
 
-// Momentum: change in delta over last 6 snapshots
+// Momentum: change in delta over last N snapshots
 export function computeMomentum(deltaHistory) {
   if (deltaHistory.length < 2) return 0;
   const recent = deltaHistory[deltaHistory.length - 1];
@@ -57,7 +75,7 @@ export function computeMomentum(deltaHistory) {
   return recent - older;
 }
 
-// Persistence: count consecutive snapshots from end where delta > 0
+// Persistence: consecutive snapshots from end where delta > 0
 export function computePersistence(deltaHistory) {
   let count = 0;
   for (let i = deltaHistory.length - 1; i >= 0; i--) {
@@ -67,13 +85,12 @@ export function computePersistence(deltaHistory) {
   return count;
 }
 
-export function computeConfidenceScore(history, rules) {
+export function computeConfidenceScore(history, currentProtocol, rules) {
   if (history.length < 2) return 0;
-  const deltaHistory = getDeltaHistory(history);
-  const emaDelta = computeEmaDelta(history, 6);
+  const deltaHistory = getDeltaHistory(history, currentProtocol);
+  const emaDelta = computeEMA(deltaHistory, 6);
   const volatility = computeStdDev(deltaHistory);
   const persistence = computePersistence(deltaHistory);
   const persistenceFactor = Math.min(persistence / (rules.minPersistenceChecks || 4), 1.0);
-  const score = (emaDelta / (volatility + 0.01)) * persistenceFactor;
-  return parseFloat(score.toFixed(4));
+  return parseFloat(((emaDelta / (volatility + 0.01)) * persistenceFactor).toFixed(4));
 }

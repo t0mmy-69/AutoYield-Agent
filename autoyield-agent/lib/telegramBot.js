@@ -1,8 +1,28 @@
 import axios from 'axios';
+import fs from 'fs';
+import path from 'path';
 
-const BASE_URL = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
+const CONFIG_PATH = path.join(process.cwd(), 'data', 'telegram.json');
+
+function getTelegramConfig() {
+  try {
+    const stored = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+    if (stored.botToken && stored.chatId) return stored;
+  } catch {}
+  // Fallback to env vars
+  return {
+    botToken: process.env.TELEGRAM_BOT_TOKEN || '',
+    chatId: process.env.TELEGRAM_CHAT_ID || '',
+  };
+}
 
 export async function sendApprovalMessage(decision) {
+  const { botToken, chatId } = getTelegramConfig();
+  if (!botToken || !chatId) {
+    console.warn('Telegram not configured — skipping approval message');
+    return;
+  }
+
   const { from, to, deltaPct, emaDelta, gasCostUsd, projectedAnnualGain, confidenceScore, id } = decision;
   const fromLabel = from?.toUpperCase() || '?';
   const toLabel = to?.toUpperCase() || '?';
@@ -24,8 +44,8 @@ export async function sendApprovalMessage(decision) {
   };
 
   try {
-    await axios.post(`${BASE_URL}/sendMessage`, {
-      chat_id: process.env.TELEGRAM_CHAT_ID,
+    await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      chat_id: chatId,
       text,
       parse_mode: 'Markdown',
       reply_markup: keyboard,
@@ -36,8 +56,10 @@ export async function sendApprovalMessage(decision) {
 }
 
 export async function answerCallbackQuery(callbackQueryId, text) {
+  const { botToken } = getTelegramConfig();
+  if (!botToken) return;
   try {
-    await axios.post(`${BASE_URL}/answerCallbackQuery`, {
+    await axios.post(`https://api.telegram.org/bot${botToken}/answerCallbackQuery`, {
       callback_query_id: callbackQueryId,
       text,
     });

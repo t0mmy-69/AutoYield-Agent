@@ -3,12 +3,6 @@
     "aaveAPR": 4.2,
     "compoundAPR": 3.6,
     "delta": 0.6,
-    "timestamp": 1771836494149
-  },
-  {
-    "aaveAPR": 4.2,
-    "compoundAPR": 3.6,
-    "delta": 0.6,
     "timestamp": 1771836494161
   },
   {
@@ -70,5 +64,11 @@
     "compoundAPR": 3.6,
     "delta": 0.6,
     "timestamp": 1771849792799
+  },
+  {
+    "aaveAPR": 4.2,
+    "compoundAPR": 3.6,
+    "delta": 0.6,
+    "timestamp": 1771862035386
   }
 ]

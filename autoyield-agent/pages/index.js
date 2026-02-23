@@ -2,6 +2,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useEffect, useRef } from 'react';
 import styles from '../styles/Landing.module.css';
+import roadmapStyles from '../styles/Roadmap.module.css';
 
 export default function Home() {
     const cardsRef = useRef([]);
@@ -52,6 +53,7 @@ export default function Home() {
                 <nav className={styles.nav}>
                     <Link href="#features" className={styles.navLink}>Features</Link>
                     <Link href="#how-it-works" className={styles.navLink}>How it Works</Link>
+                    <Link href="#roadmap" className={styles.navLink}>Roadmap</Link>
                     <a href="#" className={styles.navLink}>Docs</a>
                 </nav>
                 <Link href="/dapp">
@@ -164,6 +166,62 @@ export default function Home() {
                 </div>
             </section>
 
+            {/* Roadmap Section */}
+            <section id="roadmap" className={roadmapStyles.roadmapSection}>
+                <div className={styles.sectionHeader}>
+                    <h2 className={styles.sectionTitle}>Product Roadmap</h2>
+                    <p className={styles.sectionDescription}>Our vision for the future of fully autonomous, cross-chain yield optimization.</p>
+                </div>
+
+                <div className={roadmapStyles.timeline}>
+
+                    <div className={`${roadmapStyles.timelineItem} ${roadmapStyles.active}`}>
+                        <div className={roadmapStyles.timelineDot}></div>
+                        <div className={roadmapStyles.timelineContent}>
+                            <div className={roadmapStyles.phaseTitle}>
+                                <span className={roadmapStyles.phaseBadge}>Phase 1</span>
+                                <h3>MVP & Core Logic</h3>
+                            </div>
+                            <p>Launch on Sepolia Testnet. Initial integration with AAVE and Compound. Basic AI decision engine with Momentum and EMA analysis. Native Telegram bot alerts.</p>
+                        </div>
+                    </div>
+
+                    <div className={roadmapStyles.timelineItem}>
+                        <div className={roadmapStyles.timelineDot}></div>
+                        <div className={roadmapStyles.timelineContent}>
+                            <div className={roadmapStyles.phaseTitle}>
+                                <span className={roadmapStyles.phaseBadge}>Phase 2</span>
+                                <h3>Multi-chain Expansion</h3>
+                            </div>
+                            <p>Mainnet deployment on Arbitrum and Optimism for low-gas execution. Addition of 5+ new lending protocols (Radiant, Morpho, etc.). Gas-aware routing algorithms.</p>
+                        </div>
+                    </div>
+
+                    <div className={roadmapStyles.timelineItem}>
+                        <div className={roadmapStyles.timelineDot}></div>
+                        <div className={roadmapStyles.timelineContent}>
+                            <div className={roadmapStyles.phaseTitle}>
+                                <span className={roadmapStyles.phaseBadge}>Phase 3</span>
+                                <h3>Advanced AI & LPs</h3>
+                            </div>
+                            <p>Integration of Machine Learning models for predictive APY forecasting. Expansion from simple lending to Liquidity Provisioning (Uniswap V3) and leveraged yields.</p>
+                        </div>
+                    </div>
+
+                    <div className={roadmapStyles.timelineItem}>
+                        <div className={roadmapStyles.timelineDot}></div>
+                        <div className={roadmapStyles.timelineContent}>
+                            <div className={roadmapStyles.phaseTitle}>
+                                <span className={roadmapStyles.phaseBadge}>Phase 4</span>
+                                <h3>Decentralized Governance</h3>
+                            </div>
+                            <p>Launch of the $AYD token. Transition of protocol control and AI parameter tuning to the DAO. Fully decentralized, trustless agent network.</p>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
             {/* CTA Section */}
             <section className={styles.ctaSection}>
                 <h2 className={styles.ctaTitle}>Ready to automate your yields?</h2>
@@ -172,10 +230,10 @@ export default function Home() {
                         Launch Dapp Now
                     </button>
                 </Link>
-            </section>
+            </section >
 
             {/* Footer */}
-            <footer className={styles.footer}>
+            < footer className={styles.footer} >
                 <div className={styles.footerTop}>
                     <div className={styles.footerBrand}>
                         <div className={styles.logoArea}>
@@ -196,6 +254,7 @@ export default function Home() {
                             <Link href="/dapp">Launch App</Link>
                             <a href="#features">Features</a>
                             <a href="#how-it-works">How it works</a>
+                            <a href="#roadmap">Roadmap</a>
                         </div>
                         <div className={styles.linkColumn}>
                             <h5>Resources</h5>
@@ -215,7 +274,7 @@ export default function Home() {
                     <div>&copy; 2026 AutoYield Agent. All rights reserved.</div>
                     <div>Terms of Service &middot; Privacy Policy</div>
                 </div>
-            </footer>
-        </div>
+            </footer >
+        </div >
     );
 }

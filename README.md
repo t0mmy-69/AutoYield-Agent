@@ -14,15 +14,27 @@ Retail users face two common problems:
 1. Chasing small APR differences and losing money to gas.
 2. Doing nothing and missing meaningful yield shifts.
 
-APR difference between Aave and Compound is often:
-0.1% to 0.5%
+**Real APR data (historical 2023–2025):**
 
-Gas per rotation:
-~ $0.20 to $0.50
+| Protocol           | Typical APY | Range        |
+|--------------------|-------------|--------------|
+| Aave USDC          | 4.2%        | 2.1% – 11.8% |
+| Compound USDC      | 3.6%        | 1.5% – 9.3%  |
+| Delta (spread)     | 0.4%        | 0.1% – 2.1%  |
 
-For small capital, rotating blindly is irrational.
+Gas per rotation on L2: $0.10 – $0.50
 
-AutoYield Agent solves this by introducing a capital-aware, trend-filtered, rule-based decision engine.
+**The core math problem:**
+
+At $1,000 balance rotating daily at 0.3% delta:
+- Daily gain = $0.008
+- Daily gas = $0.30
+- **Net daily loss = -$0.292**
+
+A naive bot destroys capital. AutoYield prevents it.
+
+The agent's job is to say NOOP most of the time, and ROTATE only when the
+economics are clearly justified.
 
 ---
 
@@ -39,6 +51,30 @@ Each user has:
 - Optional Telegram approval before execution
 
 The Agent acts as a rational optimizer, not an aggressive yield chaser.
+
+---
+
+# Why Not Yearn?
+
+Yearn Finance and similar protocols are excellent for users who want maximum yield
+with zero involvement. AutoYield serves a different user.
+
+| Dimension            | Yearn / Beefy           | AutoYield                      |
+|----------------------|-------------------------|--------------------------------|
+| Custody              | Vault holds your USDC   | You hold your keys always      |
+| Fees                 | 2% mgmt + 20% perf fee  | Zero — gas only on actual moves|
+| Strategy visibility  | Hidden in contract      | Every decision explained       |
+| User control         | None                    | Custom rules, thresholds       |
+| Approval             | Fully automatic         | UI or Telegram confirm         |
+
+**Fee comparison on $5,000 at 5% APY:**
+
+Yearn: $100 management + 20% of $250 = $150 in fees
+AutoYield: 4 rotations × $0.30 = **$1.20 in total cost**
+
+AutoYield is not competing with Yearn for the same user.
+AutoYield serves users who want custody, transparency, and control — and are
+willing to accept the trade-off of doing their own yield routing through an agent.
 
 ---
 
@@ -95,17 +131,32 @@ This ensures long-term profitability.
 
 ---
 
-## Layer 4 — Trend Persistence Filter
+## Layer 4 — Confidence Scoring Engine
 
-The agent stores APR history.
+The agent maintains APR history and computes a composite confidence score.
 
-Rotate only if:
+Steps:
 
-- Delta persists for N consecutive checks  
-OR  
-- Delta trend is increasing  
+1. Smooth APR history with EMA (window = 6 checks) → removes single-check spikes
+2. Calculate momentum: is the delta growing or shrinking?
+3. Measure delta volatility: high variance → less trust in current snapshot
+4. Calculate persistence: how many consecutive checks showed positive delta?
 
-This avoids flip-flop behavior and noise chasing.
+Final score:
+
+```
+confidenceScore = (emaDelta / deltaVolatility) × persistenceFactor
+```
+
+Rotate only if confidenceScore > rules.confidenceThreshold (default: 0.6)
+
+Example — strong signal:
+  emaDelta = 0.5%, volatility = 0.05%, persistence = 6/6 → score = 10.0 → ROTATE
+
+Example — weak signal:
+  emaDelta = 0.3%, volatility = 0.4%, persistence = 2/6 → score = 0.25 → NOOP
+
+This is not a simple if/else. The agent scores signal quality.
 
 ---
 
@@ -148,45 +199,45 @@ This adds human-in-the-loop control for retail users.
 4. Configure rules
 5. Click Run Check
 6. View:
-   - APR values
-   - delta
+   - APR values (live and EMA-smoothed)
+   - delta and momentum direction
+   - confidence score
    - gas estimate
-   - projected annual gain
-   - decision + reasoning
+   - projected annual gain vs expected gas cost
+   - decision + reasoning (plain language)
 7. Approve execution (UI or Telegram)
 8. View transaction hash
 9. View move history
 
 ---
 
-# Example Scenario
+# Scenario Analysis
 
-## Case A — $1000 balance
+Gas = $0.30 per rotation. Annual gain = balance × delta.
 
-Delta = 0.3%
+## Rotation Profitability by Balance and Frequency
 
-ProjectedAnnualGain = $3
+| Balance  | Delta | Frequency     | Annual Gas | Annual Gain | Net Gain   | Decision |
+|----------|-------|---------------|------------|-------------|------------|----------|
+| $1,000   | 0.3%  | Daily (365×)  | $109.50    | $3.00       | -$106.50   | NOOP     |
+| $1,000   | 0.3%  | Monthly (12×) | $3.60      | $3.00       | -$0.60     | NOOP     |
+| $1,000   | 0.5%  | Monthly (12×) | $3.60      | $5.00       | +$1.40     | ROTATE   |
+| $1,000   | 1.0%  | Monthly (12×) | $3.60      | $10.00      | +$6.40     | ROTATE   |
+| $5,000   | 0.3%  | Monthly (12×) | $3.60      | $15.00      | +$11.40    | ROTATE   |
+| $5,000   | 0.5%  | Weekly (52×)  | $15.60     | $25.00      | +$9.40     | ROTATE   |
+| $5,000   | 0.5%  | Daily (365×)  | $109.50    | $25.00      | -$84.50    | NOOP     |
+| $10,000  | 0.5%  | Weekly (52×)  | $15.60     | $50.00      | +$34.40    | ROTATE   |
 
-Gas = $0.30  
-4 rotations/year = $1.20  
+Daily rotation is never justified at typical deltas for balances under $20,000.
+AutoYield prevents exactly this mistake.
 
-Net ≈ $1.80  
+## Realistic Annual Net Gain (Delta = 0.4%, Conservative)
 
-Agent may rotate only if delta persists.
-
----
-
-## Case B — $5000 balance
-
-Delta = 0.5%
-
-ProjectedAnnualGain = $25
-
-Gas ≈ $1.20 annually  
-
-Net ≈ $23.80  
-
-Agent ROTATE justified.
+| Balance  | Agent Rotations/Year | Net Gain   |
+|----------|----------------------|------------|
+| $1,000   | 4                    | +$2.80     |
+| $5,000   | 12                   | +$16.40    |
+| $10,000  | 26                   | +$32.20    |
 
 ---
 

@@ -8,27 +8,30 @@ import {
 
 /**
  * Main decision engine — 6 steps as defined in spec.
+ * Supports N protocols dynamically via aprSnapshot.aprs map.
  * Returns a decision object with action ROTATE or NOOP + full reasoning.
  */
 export function runDecisionEngine({ state, aprSnapshot, history, rules, gasCostUsd }) {
-  const { aaveAPR, compoundAPR } = aprSnapshot;
+  const { aprs, best: target, bestAPR: targetAPR } = aprSnapshot;
   const { currentProtocol, lastMoveTimestamp } = state;
   const userBalance = state.userBalance || 0;
 
   // ── Step 1: Determine target protocol ───────────────────────────────────
-  const target = compoundAPR > aaveAPR ? 'compound' : 'aave';
-  const targetAPR = target === 'compound' ? compoundAPR : aaveAPR;
-  const currentAPR = currentProtocol === 'aave' ? aaveAPR : compoundAPR;
+  const currentAPR = aprs[currentProtocol] ?? 0;
   const deltaPct = parseFloat((targetAPR - currentAPR).toFixed(4));
 
   if (deltaPct <= 0 || target === currentProtocol) {
-    return noop({ deltaPct, aprSnapshot, gasCostUsd, history, rules, reason: 'Current protocol already has highest APR. No rotation needed.' });
+    return noop({ deltaPct, aprSnapshot, gasCostUsd, currentProtocol, reason: 'Current protocol already has highest APR. No rotation needed.' });
+  }
+
+  if (deltaPct < (rules.minDeltaPct || 0.4)) {
+    return noop({ deltaPct, aprSnapshot, gasCostUsd, currentProtocol, reason: `Delta +${deltaPct}% below minimum threshold ${rules.minDeltaPct}%.` });
   }
 
   // ── Step 2: Capital threshold check ─────────────────────────────────────
-  const requiredCapital = deltaPct > 0 ? gasCostUsd / (deltaPct / 100) : Infinity;
+  const requiredCapital = gasCostUsd / (deltaPct / 100);
   if (userBalance < requiredCapital) {
-    return noop({ deltaPct, aprSnapshot, gasCostUsd, history, rules, reason: `Balance $${userBalance.toFixed(0)} below required capital $${requiredCapital.toFixed(0)} to justify gas at this delta.` });
+    return noop({ deltaPct, aprSnapshot, gasCostUsd, currentProtocol, reason: `Balance $${userBalance.toFixed(0)} below required capital $${requiredCapital.toFixed(0)} to justify gas at this delta.` });
   }
 
   // ── Step 3: Annual profitability model ───────────────────────────────────
@@ -37,12 +40,12 @@ export function runDecisionEngine({ state, aprSnapshot, history, rules, gasCostU
   const expectedAnnualGasCost = gasCostUsd * expectedRotationsPerYear;
 
   if (projectedAnnualGain <= expectedAnnualGasCost) {
-    return noop({ deltaPct, aprSnapshot, gasCostUsd, history, rules, reason: `Annual gain $${projectedAnnualGain.toFixed(2)} does not exceed expected annual gas cost $${expectedAnnualGasCost.toFixed(2)}.`, projectedAnnualGain, expectedAnnualGasCost });
+    return noop({ deltaPct, aprSnapshot, gasCostUsd, currentProtocol, projectedAnnualGain, expectedAnnualGasCost, reason: `Annual gain $${projectedAnnualGain.toFixed(2)} does not exceed expected annual gas cost $${expectedAnnualGasCost.toFixed(2)}.` });
   }
 
   // ── Step 4: Trend analysis and confidence scoring ────────────────────────
-  const deltaHistory = getDeltaHistory(history);
-  const emaDelta = parseFloat(computeEmaDelta(history, 6).toFixed(4));
+  const deltaHistory = getDeltaHistory(history, currentProtocol);
+  const emaDelta = parseFloat(computeEmaDelta(history, currentProtocol, 6).toFixed(4));
   const momentum = parseFloat(computeMomentum(deltaHistory).toFixed(4));
   const deltaVolatility = parseFloat(computeStdDev(deltaHistory).toFixed(4));
   const persistence = computePersistence(deltaHistory);
@@ -50,28 +53,28 @@ export function runDecisionEngine({ state, aprSnapshot, history, rules, gasCostU
   const confidenceScore = parseFloat(((emaDelta / (deltaVolatility + 0.01)) * persistenceFactor).toFixed(4));
 
   if (emaDelta <= 0) {
-    return noop({ deltaPct, emaDelta, momentum, deltaVolatility, confidenceScore, persistence, aprSnapshot, gasCostUsd, history, rules, reason: 'EMA-smoothed delta is negative — current snapshot may be a transient spike.' });
+    return noop({ deltaPct, emaDelta, momentum, deltaVolatility, confidenceScore, persistence, aprSnapshot, gasCostUsd, currentProtocol, reason: 'EMA-smoothed delta is negative — current snapshot may be a transient spike.' });
   }
 
   if (confidenceScore < (rules.confidenceThreshold || 0.6)) {
-    return noop({ deltaPct, emaDelta, momentum, deltaVolatility, confidenceScore, persistence, aprSnapshot, gasCostUsd, history, rules, reason: `Confidence score ${confidenceScore.toFixed(2)} below threshold ${rules.confidenceThreshold}. Delta is present but not sufficiently stable or persistent.` });
+    return noop({ deltaPct, emaDelta, momentum, deltaVolatility, confidenceScore, persistence, aprSnapshot, gasCostUsd, currentProtocol, reason: `Confidence score ${confidenceScore.toFixed(2)} below threshold ${rules.confidenceThreshold}. Delta is present but not sufficiently stable or persistent.` });
   }
 
   // ── Step 5: Cooldown check ───────────────────────────────────────────────
   if (lastMoveTimestamp) {
     const minutesSinceLastMove = (Date.now() - lastMoveTimestamp) / 60000;
     if (minutesSinceLastMove < (rules.cooldownMinutes || 60)) {
-      return noop({ deltaPct, emaDelta, momentum, deltaVolatility, confidenceScore, persistence, aprSnapshot, gasCostUsd, history, rules, reason: `Cooldown active. Last move was ${minutesSinceLastMove.toFixed(0)} min ago. Required cooldown: ${rules.cooldownMinutes} min.` });
+      return noop({ deltaPct, emaDelta, momentum, deltaVolatility, confidenceScore, persistence, aprSnapshot, gasCostUsd, currentProtocol, reason: `Cooldown active. Last move was ${minutesSinceLastMove.toFixed(0)} min ago. Required cooldown: ${rules.cooldownMinutes} min.` });
     }
   }
 
   // ── Step 6: Safety checks ────────────────────────────────────────────────
   if (gasCostUsd > (rules.maxGasUsdPerMove || 2.0)) {
-    return noop({ deltaPct, emaDelta, momentum, deltaVolatility, confidenceScore, persistence, aprSnapshot, gasCostUsd, history, rules, reason: `Gas cost $${gasCostUsd.toFixed(2)} exceeds maximum allowed $${rules.maxGasUsdPerMove}.` });
+    return noop({ deltaPct, emaDelta, momentum, deltaVolatility, confidenceScore, persistence, aprSnapshot, gasCostUsd, currentProtocol, reason: `Gas cost $${gasCostUsd.toFixed(2)} exceeds maximum allowed $${rules.maxGasUsdPerMove}.` });
   }
 
   if (userBalance > (rules.maxTotalValueUsd || 50000)) {
-    return noop({ deltaPct, emaDelta, momentum, deltaVolatility, confidenceScore, persistence, aprSnapshot, gasCostUsd, history, rules, reason: `Balance $${userBalance.toFixed(0)} exceeds safety cap $${rules.maxTotalValueUsd}. Manual review recommended.` });
+    return noop({ deltaPct, emaDelta, momentum, deltaVolatility, confidenceScore, persistence, aprSnapshot, gasCostUsd, currentProtocol, reason: `Balance $${userBalance.toFixed(0)} exceeds safety cap $${rules.maxTotalValueUsd}. Manual review recommended.` });
   }
 
   // ── ROTATE ───────────────────────────────────────────────────────────────
@@ -79,6 +82,8 @@ export function runDecisionEngine({ state, aprSnapshot, history, rules, gasCostU
     action: 'ROTATE',
     from: currentProtocol,
     to: target,
+    fromAPR: currentAPR,
+    toAPR: targetAPR,
     deltaPct,
     emaDelta,
     momentum,
@@ -89,14 +94,20 @@ export function runDecisionEngine({ state, aprSnapshot, history, rules, gasCostU
     netAnnualGain: parseFloat((projectedAnnualGain - expectedAnnualGasCost).toFixed(2)),
     confidenceScore,
     persistenceChecks: persistence,
-    reason: `Delta +${deltaPct}% (EMA ${emaDelta}%) stable for ${persistence} checks. Confidence ${confidenceScore.toFixed(2)} ≥ threshold ${rules.confidenceThreshold}. Annual net gain $${(projectedAnnualGain - expectedAnnualGasCost).toFixed(2)}.`,
+    allAPRs: aprs,
+    reason: `Delta +${deltaPct}% (EMA ${emaDelta}%) stable for ${persistence} checks. Confidence ${confidenceScore.toFixed(2)} >= threshold ${rules.confidenceThreshold}. Annual net gain $${(projectedAnnualGain - expectedAnnualGasCost).toFixed(2)}.`,
     timestamp: Date.now(),
     id: `decision_${Date.now()}`,
   };
 }
 
 function noop(context) {
-  const { deltaPct = 0, emaDelta = 0, momentum = 0, deltaVolatility = 0, confidenceScore = 0, persistence = 0, gasCostUsd = 0, projectedAnnualGain = 0, expectedAnnualGasCost = 0, aprSnapshot, reason } = context;
+  const {
+    deltaPct = 0, emaDelta = 0, momentum = 0, deltaVolatility = 0,
+    confidenceScore = 0, persistence = 0, gasCostUsd = 0,
+    projectedAnnualGain = 0, expectedAnnualGasCost = 0,
+    aprSnapshot, reason,
+  } = context;
   return {
     action: 'NOOP',
     from: null,
@@ -111,6 +122,7 @@ function noop(context) {
     netAnnualGain: 0,
     confidenceScore,
     persistenceChecks: persistence,
+    allAPRs: aprSnapshot?.aprs || {},
     reason,
     timestamp: Date.now(),
     id: `decision_${Date.now()}`,

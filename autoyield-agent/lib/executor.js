@@ -1,16 +1,5 @@
 import { ethers } from 'ethers';
-import { approveToken } from './agentWallet.js';
-
-// Minimal ABIs — only the functions we need
-const AAVE_POOL_ABI = [
-  'function supply(address asset, uint256 amount, address onBehalfOf, uint16 referralCode)',
-  'function withdraw(address asset, uint256 amount, address to) returns (uint256)',
-];
-
-const COMET_ABI = [
-  'function supply(address asset, uint256 amount)',
-  'function withdraw(address asset, uint256 amount)',
-];
+import { getProtocol } from './protocols/index.js';
 
 const ERC20_ABI = [
   'function decimals() view returns (uint8)',
@@ -19,56 +8,35 @@ const ERC20_ABI = [
 
 /**
  * Execute a rotation: withdraw from `from` protocol, supply to `to` protocol.
- * Returns { txHash, blockNumber, from, to, amount }
+ * Uses the protocol adapter registry — supports any registered protocol.
+ * Adding a new protocol only requires registering a new adapter.
  */
 export async function executeRotation({ from, to, signer }) {
+  const fromAdapter = getProtocol(from);
+  const toAdapter = getProtocol(to);
+
+  if (!fromAdapter) throw new Error(`Unknown source protocol: "${from}"`);
+  if (!toAdapter) throw new Error(`Unknown target protocol: "${to}"`);
+
   const agentAddress = await signer.getAddress();
   const usdcAddress = process.env.USDC_ADDRESS;
-
   const usdc = new ethers.Contract(usdcAddress, ERC20_ABI, signer);
   const decimals = await usdc.decimals();
 
-  // Step 1: Withdraw all USDC from current protocol
-  let withdrawTx;
-  if (from === 'aave') {
-    const aavePool = new ethers.Contract(process.env.AAVE_POOL_ADDRESS, AAVE_POOL_ABI, signer);
-    // Withdraw max (pass uint256 max to withdraw all)
-    const MAX_UINT = ethers.MaxUint256;
-    withdrawTx = await aavePool.withdraw(usdcAddress, MAX_UINT, agentAddress);
-  } else {
-    const comet = new ethers.Contract(process.env.COMPOUND_COMET_ADDRESS, COMET_ABI, signer);
-    const balance = await usdc.balanceOf(agentAddress);
-    withdrawTx = await comet.withdraw(usdcAddress, balance);
-  }
+  // Step 1: Withdraw all USDC from source protocol
+  const withdrawReceipt = await fromAdapter.withdraw({ signer, usdcAddress });
 
-  const withdrawReceipt = await withdrawTx.wait();
+  // Step 2: Confirm received balance
+  const amount = await usdc.balanceOf(agentAddress);
+  if (amount === 0n) throw new Error('No USDC available after withdrawal');
 
-  // Step 2: Get the received USDC balance
-  const usdcBalance = await usdc.balanceOf(agentAddress);
-  const amount = usdcBalance;
-
-  if (amount === 0n) {
-    throw new Error('No USDC available after withdrawal');
-  }
-
-  // Step 3: Approve target protocol to spend USDC
-  let supplyTx;
-  if (to === 'aave') {
-    await approveToken(usdcAddress, process.env.AAVE_POOL_ADDRESS, ethers.formatUnits(amount, decimals), signer);
-    const aavePool = new ethers.Contract(process.env.AAVE_POOL_ADDRESS, AAVE_POOL_ABI, signer);
-    supplyTx = await aavePool.supply(usdcAddress, amount, agentAddress, 0);
-  } else {
-    await approveToken(usdcAddress, process.env.COMPOUND_COMET_ADDRESS, ethers.formatUnits(amount, decimals), signer);
-    const comet = new ethers.Contract(process.env.COMPOUND_COMET_ADDRESS, COMET_ABI, signer);
-    supplyTx = await comet.supply(usdcAddress, amount);
-  }
-
-  const supplyReceipt = await supplyTx.wait();
+  // Step 3: Supply full balance to target protocol
+  const supplyReceipt = await toAdapter.supply({ signer, usdcAddress, amount });
 
   return {
     withdrawTxHash: withdrawReceipt.hash,
     supplyTxHash: supplyReceipt.hash,
-    txHash: supplyReceipt.hash, // primary reference
+    txHash: supplyReceipt.hash,
     blockNumber: supplyReceipt.blockNumber,
     from,
     to,

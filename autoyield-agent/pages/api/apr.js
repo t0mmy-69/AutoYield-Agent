@@ -1,10 +1,10 @@
-import { fetchBothAPRs } from '../../lib/aprFetcher.js';
+import { fetchAllAPRs } from '../../lib/aprFetcher.js';
 import { appendSnapshot } from '../../lib/aprHistory.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
   try {
-    const snapshot = await fetchBothAPRs();
+    const snapshot = await fetchAllAPRs();
     appendSnapshot(snapshot);
     res.status(200).json(snapshot);
   } catch (err) {

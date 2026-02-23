@@ -1,55 +1,28 @@
-import { ethers } from 'ethers';
-import { getProvider } from './agentWallet.js';
+// aprFetcher.js — thin wrapper over the protocol registry
+// All APR fetching logic lives in lib/protocols/adapters/*.js
 
-// Aave V3 Pool ABI — only getReserveData needed
-const AAVE_POOL_ABI = [
-  'function getReserveData(address asset) view returns (tuple(uint256 configuration, uint128 liquidityIndex, uint128 currentLiquidityRate, uint128 variableBorrowIndex, uint128 currentVariableBorrowRate, uint128 currentStableBorrowRate, uint40 lastUpdateTimestamp, uint16 id, address aTokenAddress, address stableDebtTokenAddress, address variableDebtTokenAddress, address interestRateStrategyAddress, uint128 accruedToTreasury, uint128 unbacked, uint128 isolationModeTotalDebt))',
-];
+import { fetchAllAPRs as registryFetchAll, getProtocol } from './protocols/index.js';
 
-// Compound V3 Comet ABI — getSupplyRate + getUtilization
-const COMET_ABI = [
-  'function getUtilization() view returns (uint256)',
-  'function getSupplyRate(uint256 utilization) view returns (uint64)',
-];
+// Primary function — fetch APRs from all enabled protocols
+export async function fetchAllAPRs() {
+  return registryFetchAll();
+}
 
-const RAY = BigInt('1000000000000000000000000000'); // 1e27
-const SECONDS_PER_YEAR = 31536000n;
+// Legacy wrapper — kept for any code that still reads aaveAPR/compoundAPR
+export async function fetchBothAPRs() {
+  const snapshot = await registryFetchAll();
+  return {
+    ...snapshot,
+    aaveAPR: snapshot.aprs['aave'] ?? null,
+    compoundAPR: snapshot.aprs['compound'] ?? null,
+    delta: Math.abs((snapshot.aprs['aave'] ?? 0) - (snapshot.aprs['compound'] ?? 0)),
+  };
+}
 
 export async function getAaveAPR() {
-  try {
-    const provider = getProvider();
-    const pool = new ethers.Contract(process.env.AAVE_POOL_ADDRESS, AAVE_POOL_ABI, provider);
-    const data = await pool.getReserveData(process.env.USDC_ADDRESS);
-    // currentLiquidityRate is in RAY (1e27), represents rate per second
-    const rateRaw = BigInt(data.currentLiquidityRate.toString());
-    const aprPct = Number((rateRaw * 10000n) / RAY) / 100; // percent
-    return parseFloat(aprPct.toFixed(4));
-  } catch {
-    // Fallback for testnet instability — return realistic mock
-    return 4.20;
-  }
+  return getProtocol('aave').getAPR();
 }
 
 export async function getCompoundAPR() {
-  try {
-    const provider = getProvider();
-    const comet = new ethers.Contract(process.env.COMPOUND_COMET_ADDRESS, COMET_ABI, provider);
-    const utilization = await comet.getUtilization();
-    const supplyRatePerSec = await comet.getSupplyRate(utilization);
-    // supplyRate is per second scaled to 1e18
-    const annualRate = Number(BigInt(supplyRatePerSec.toString()) * SECONDS_PER_YEAR) / 1e18;
-    return parseFloat((annualRate * 100).toFixed(4));
-  } catch {
-    return 3.60;
-  }
-}
-
-export async function fetchBothAPRs() {
-  const [aaveAPR, compoundAPR] = await Promise.all([getAaveAPR(), getCompoundAPR()]);
-  return {
-    aaveAPR,
-    compoundAPR,
-    delta: parseFloat((Math.abs(compoundAPR - aaveAPR)).toFixed(4)),
-    timestamp: Date.now(),
-  };
+  return getProtocol('compound').getAPR();
 }

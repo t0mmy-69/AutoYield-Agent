@@ -1,4 +1,4 @@
-import { fetchBothAPRs } from '../../lib/aprFetcher.js';
+import { fetchAllAPRs } from '../../lib/aprFetcher.js';
 import { appendSnapshot, getHistory } from '../../lib/aprHistory.js';
 import { runDecisionEngine } from '../../lib/decisionEngine.js';
 import { estimateGasCostUsd } from '../../lib/gasEstimator.js';
@@ -14,7 +14,7 @@ export default async function handler(req, res) {
     const agentAddress = await signer.getAddress();
     const usdcBalance = await getUsdcBalance(agentAddress);
 
-    const aprSnapshot = await fetchBothAPRs();
+    const aprSnapshot = await fetchAllAPRs();
     const history = appendSnapshot(aprSnapshot);
     const state = readState();
     const rules = readRules();
@@ -23,16 +23,13 @@ export default async function handler(req, res) {
     const stateWithBalance = { ...state, userBalance: usdcBalance };
     const decision = runDecisionEngine({ state: stateWithBalance, aprSnapshot, history, rules, gasCostUsd });
 
-    // If ROTATE, store as pending approval
     if (decision.action === 'ROTATE') {
       writeState({ ...state, pendingApproval: decision });
 
-      // Auto-trigger Telegram if mode is telegram_approval
       if (rules.executionMode === 'telegram_approval') {
         await sendApprovalMessage(decision);
       }
 
-      // Auto-execute if mode is auto
       if (rules.executionMode === 'auto') {
         const { executeApproval } = await import('./approve.js');
         await executeApproval(decision, state, usdcBalance, signer);

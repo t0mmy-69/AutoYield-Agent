@@ -1,0 +1,122 @@
+.roadmapSection {
+    padding: 120px 24px;
+    max-width: 900px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 10;
+}
+
+.timeline {
+    position: relative;
+    margin-top: 60px;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 24px;
+    width: 2px;
+    background: linear-gradient(180deg, rgba(99, 102, 241, 0.5), rgba(236, 72, 153, 0.1));
+    z-index: 0;
+}
+
+.timelineItem {
+    position: relative;
+    margin-bottom: 60px;
+    padding-left: 70px;
+}
+
+.timelineItem:last-child {
+    margin-bottom: 0;
+}
+
+.timelineDot {
+    position: absolute;
+    left: 17px;
+    top: 6px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #0b0b14;
+    border: 2px solid #818cf8;
+    z-index: 1;
+    box-shadow: 0 0 10px rgba(99, 102, 241, 0.4);
+}
+
+.timelineItem.active .timelineDot {
+    background: #818cf8;
+    box-shadow: 0 0 15px rgba(99, 102, 241, 0.8);
+    animation: pulseOpacity 2s infinite;
+}
+
+.timelineContent {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    padding: 24px 32px;
+    backdrop-filter: blur(10px);
+    transition: transform 0.3s ease, background 0.3s ease;
+}
+
+.timelineItem:hover .timelineContent {
+    transform: translateX(5px);
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(99, 102, 241, 0.2);
+}
+
+.phaseTitle {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.phaseBadge {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    background: rgba(148, 163, 184, 0.1);
+    color: #94a3b8;
+}
+
+.timelineItem.active .phaseBadge {
+    background: rgba(99, 102, 241, 0.15);
+    color: #818cf8;
+}
+
+.phaseTitle h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #f8fafc;
+    margin: 0;
+}
+
+.timelineContent p {
+    color: #94a3b8;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin: 0;
+}
+
+@media (max-width: 600px) {
+    .timeline::before {
+        left: 16px;
+    }
+
+    .timelineDot {
+        left: 9px;
+    }
+
+    .timelineItem {
+        padding-left: 50px;
+    }
+
+    .timelineContent {
+        padding: 20px;
+    }
+}

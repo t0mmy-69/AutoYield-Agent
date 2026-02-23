@@ -3,8 +3,8 @@
   "confidenceThreshold": 0.6,
   "minPersistenceChecks": 4,
   "cooldownMinutes": 60,
-  "maxGasUsdPerMove": 2.0,
+  "maxGasUsdPerMove": 2,
   "maxTotalValueUsd": 50000,
   "maxMovesPerYear": 52,
-  "executionMode": "manual_confirm"
+  "executionMode": "telegram_approval"
 }

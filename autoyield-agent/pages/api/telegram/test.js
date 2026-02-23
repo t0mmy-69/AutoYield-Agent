@@ -1,27 +1,38 @@
 import axios from 'axios';
+import fs from 'fs';
+import path from 'path';
+
+const CONFIG_PATH = path.join(process.cwd(), 'data', 'telegram.json');
+
+function readConfig() {
+  try {
+    return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+  } catch {
+    return { botToken: '', chatId: '' };
+  }
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
-  const token = process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = process.env.TELEGRAM_CHAT_ID;
+  const config = readConfig();
+  const token = config.botToken;
+  const chatId = config.chatId;
 
-  if (!token || token === 'YOUR_BOT_TOKEN_HERE') {
-    return res.status(400).json({ error: 'TELEGRAM_BOT_TOKEN is not configured in .env.local' });
+  if (!token) {
+    return res.status(400).json({ error: 'Bot Token chưa được cấu hình. Vui lòng nhập Bot Token ở trên.' });
   }
-  if (!chatId || chatId === 'YOUR_CHAT_ID_HERE') {
-    return res.status(400).json({ error: 'TELEGRAM_CHAT_ID is not configured in .env.local' });
+  if (!chatId) {
+    return res.status(400).json({ error: 'Chat ID chưa được cấu hình. Vui lòng nhập Chat ID ở trên.' });
   }
 
   const BASE_URL = `https://api.telegram.org/bot${token}`;
 
   try {
-    // Verify bot token is valid via getMe
     const meRes = await axios.get(`${BASE_URL}/getMe`);
     const botName = meRes.data?.result?.first_name || 'Bot';
     const botUsername = meRes.data?.result?.username || '';
 
-    // Send a test message
     await axios.post(`${BASE_URL}/sendMessage`, {
       chat_id: chatId,
       text:

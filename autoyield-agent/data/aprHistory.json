@@ -1,1 +1,74 @@
-[]
+[
+  {
+    "aaveAPR": 4.2,
+    "compoundAPR": 3.6,
+    "delta": 0.6,
+    "timestamp": 1771832737554
+  },
+  {
+    "aaveAPR": 4.2,
+    "compoundAPR": 3.6,
+    "delta": 0.6,
+    "timestamp": 1771832832512
+  },
+  {
+    "aaveAPR": 4.2,
+    "compoundAPR": 3.6,
+    "delta": 0.6,
+    "timestamp": 1771832832520
+  },
+  {
+    "aaveAPR": 4.2,
+    "compoundAPR": 3.6,
+    "delta": 0.6,
+    "timestamp": 1771833813951
+  },
+  {
+    "aaveAPR": 4.2,
+    "compoundAPR": 3.6,
+    "delta": 0.6,
+    "timestamp": 1771833814510
+  },
+  {
+    "aaveAPR": 4.2,
+    "compoundAPR": 3.6,
+    "delta": 0.6,
+    "timestamp": 1771833898827
+  },
+  {
+    "aaveAPR": 4.2,
+    "compoundAPR": 3.6,
+    "delta": 0.6,
+    "timestamp": 1771833898892
+  },
+  {
+    "aaveAPR": 4.2,
+    "compoundAPR": 3.6,
+    "delta": 0.6,
+    "timestamp": 1771835239664
+  },
+  {
+    "aaveAPR": 4.2,
+    "compoundAPR": 3.6,
+    "delta": 0.6,
+    "timestamp": 1771835239702
+  },
+  {
+    "aaveAPR": 4.2,
+    "compoundAPR": 3.6,
+    "delta": 0.6,
+    "timestamp": 1771835253707
+  },
+  {
+    "aaveAPR": 4.2,
+    "compoundAPR": 3.6,
+    "delta": 0.6,
+    "timestamp": 1771835443494
+  },
+  {
+    "aaveAPR": 4.2,
+    "compoundAPR": 3.6,
+    "delta": 0.6,
+    "timestamp": 1771835443622
+  }
+]

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import dappStyles from '../styles/Dapp.module.css';
 
 const FIELDS = [
   { key: 'minDeltaPct', label: 'Min Delta %', type: 'number', step: 0.1, min: 0 },
@@ -27,8 +28,10 @@ export default function RulesPanel({ rules, onSave }) {
   };
 
   return (
-    <div style={styles.card}>
-      <h2 style={styles.title}>Agent Rules</h2>
+    <div className={dappStyles.glassCard}>
+      <div className={dappStyles.cardHeader}>
+        <h2 className={dappStyles.cardTitle}>Agent Configuration Rules</h2>
+      </div>
       <div style={styles.grid}>
         {FIELDS.map(({ key, label, type, step, min, max }) => (
           <label key={key} style={styles.field}>
@@ -56,19 +59,26 @@ export default function RulesPanel({ rules, onSave }) {
           </select>
         </label>
       </div>
-      <button onClick={handleSave} disabled={saving} style={styles.btn}>
-        {saving ? 'Saving...' : saved ? '✓ Saved' : 'Save Rules'}
+      <button onClick={handleSave} disabled={saving} style={{ ...styles.btn, opacity: saving ? 0.7 : 1 }}>
+        {saving ? 'Saving...' : saved ? '✓ Saved Successfully' : 'Apply Rules'}
       </button>
     </div>
   );
 }
 
 const styles = {
-  card: { background: '#1a1a2e', border: '1px solid #2a2a4a', borderRadius: 12, padding: '20px 24px', marginBottom: 16 },
-  title: { margin: '0 0 16px', fontSize: 16, color: '#888', textTransform: 'uppercase', letterSpacing: 1 },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12, marginBottom: 16 },
-  field: { display: 'flex', flexDirection: 'column', gap: 4 },
-  label: { fontSize: 12, color: '#888' },
-  input: { background: '#0f0f1e', border: '1px solid #2a2a4a', borderRadius: 6, padding: '8px 10px', color: '#eee', fontSize: 14, outline: 'none' },
-  btn: { padding: '10px 24px', background: '#4f46e5', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 14 },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16, marginBottom: 24 },
+  field: { display: 'flex', flexDirection: 'column', gap: 6 },
+  label: { fontSize: '0.85rem', color: '#94a3b8', fontWeight: 500 },
+  input: {
+    background: 'rgba(0,0,0,0.3)',
+    border: '1px solid rgba(255,255,255,0.1)',
+    borderRadius: 8,
+    padding: '10px 12px',
+    color: '#f8fafc',
+    fontSize: '0.95rem',
+    outline: 'none',
+    transition: 'border-color 0.2s',
+  },
+  btn: { width: '100%', padding: '12px 0', background: 'rgba(255,255,255,0.05)', color: '#f8fafc', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, fontWeight: 700, cursor: 'pointer', fontSize: '0.95rem', transition: 'all 0.2s' },
 };

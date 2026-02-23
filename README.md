@@ -1,188 +1,235 @@
 # AutoYield Agent DApp
-Agent Wallet DeFi Auto-Pilot for Stablecoin Yield Optimization (Testnet MVP)
+Retail DeFi Auto-Pilot with Capital-Aware Decision Engine
 
-AutoYield Agent is a browser-based DApp that creates a dedicated Agent Wallet and helps users rotate USDC between lending protocols to optimize yield under strict user-defined rules.  
-This MVP is designed for live demo in a web UI (no CLI). Testnet only.
+AutoYield Agent is a browser-based DApp that creates a dedicated Agent Wallet and helps retail stablecoin holders optimize USDC yield between lending protocols in a rational, gas-aware, and transparent way.
 
-## Product Summary
-Stablecoin lending APR changes frequently across protocols such as Aave and Compound. Many users do not monitor APR and do not want to sign multiple transactions to keep funds optimized.
+This MVP runs on testnet only.
 
-AutoYield Agent provides:
-- A DApp dashboard to manage an Agent Wallet
-- Rule-based autopilot to decide rotations
-- Gas-aware decision logic and transparent reasoning
-- Transaction execution with safety limits
-- Optional Telegram approval layer before any transaction is executed
+---
 
-## MVP Features
-### DApp UI
-- Connect wallet
-- View Agent Wallet address and USDC balance
-- Configure autopilot rules and presets
-- Run Check Now to compute decision and reasoning
-- Start and pause autopilot checks
-- Execute rotation (manual or Telegram approval)
-- Move history with tx hashes
+# Why This Exists
 
-### Strategy (MVP)
-- Asset: USDC only
-- Protocols: Aave and Compound
-- Strategy: rotate to higher net APR when delta >= threshold and net gain exceeds gas buffer
-- Chain: testnet only
+Retail users face two common problems:
 
-### Safety Controls
-- min APR delta threshold
-- max moves per day
-- cooldown timer between moves
-- max gas USD per move
-- pause on error
-- emergency withdraw to user
+1. Chasing small APR differences and losing money to gas.
+2. Doing nothing and missing meaningful yield shifts.
 
-## DApp User Flow
-### 1) Onboarding
-1. User opens the DApp and clicks Connect Wallet
-2. DApp shows:
-   - User wallet address
-   - Agent Wallet address
+APR difference between Aave and Compound is often:
+0.1% to 0.5%
 
-### 2) Funding
-1. User transfers testnet USDC to Agent Wallet
-2. DApp shows live USDC balance for the Agent Wallet
+Gas per rotation:
+~ $0.20 to $0.50
 
-### 3) Rules Setup
-User configures:
-- risk profile preset (conservative or balanced)
-- minAprDeltaPct
-- maxMovesPerDay
-- cooldownMinutes
-- maxGasUsdPerMove
-- execution.mode:
-  - manual_confirm
-  - telegram_approval
-  - auto
-- Telegram approval toggle (enabled or disabled)
-- Telegram chatId for approvals (only required if telegram_approval is enabled)
+For small capital, rotating blindly is irrational.
 
-Rules are stored in a local JSON store for MVP.
+AutoYield Agent solves this by introducing a capital-aware, trend-filtered, rule-based decision engine.
 
-### 4) Autopilot Decision
-User clicks Run Check Now or starts autopilot.
-The system:
-- fetches Aave APR and Compound APR
-- estimates gas cost in USD
-- computes net gain estimate
-- returns a decision:
-  - NOOP: do nothing
-  - ROTATE: rotate from current protocol to target protocol
+---
 
-### 5) Execution Modes
-#### manual_confirm
-- DApp displays ROTATE decision
-- User clicks Execute Rotation in the UI
-- Agent executes the transaction
-- DApp shows tx hash and updates history
+# Core Concept
 
-#### telegram_approval (optional, toggleable)
-- DApp displays ROTATE decision as Pending Approval
-- System sends a Telegram message to the user with Approve and Reject buttons
-- Only after user approval, the agent executes the transaction
-- If user rejects or no response within timeout, execution is canceled
+This is NOT a vault.
+This is NOT pooled capital.
 
-#### auto
-- Agent executes immediately when decision is ROTATE, within the same rules and safety caps
+Each user has:
 
-## Telegram Approval Mode (Optional Feature)
-When enabled, AutoYield Agent requires Telegram approval before executing any transaction.
+- A dedicated Agent Wallet
+- Customizable rule configuration
+- Transparent decision reasoning
+- Optional Telegram approval before execution
 
-Flow:
-1. System detects a ROTATE opportunity
-2. A Telegram message is sent to the user with Approve and Reject buttons
-3. Only after user approval, the Agent Wallet executes the transaction
-4. If rejected or timed out, execution is canceled
+The Agent acts as a rational optimizer, not an aggressive yield chaser.
 
-This feature can be toggled in the Rules panel.
+---
 
-## Pages (UI)
-- `/` Landing page + Connect Wallet
-- `/dashboard` Main dashboard:
-  - Wallet card (user + agent address, USDC balance)
-  - Rules panel
-  - APR and decision panel
-  - Autopilot controls
-  - Move history table
+# How The Agent Actually Works
 
-## Technical Architecture (MVP)
+The decision engine has 4 layers.
+
+---
+
+## Layer 1 — Snapshot Comparison
+
+The system fetches:
+
+- Aave USDC APR
+- Compound USDC APR
+
+Compute:
+
+deltaPct = targetAPR - currentAPR
+
+If deltaPct <= 0 → NOOP.
+
+---
+
+## Layer 2 — Capital-Aware Profitability Filter
+
+RequiredCapital = gasCost / (deltaPct / 100)
+
+If user balance < RequiredCapital → NOOP.
+
+This prevents irrational rotation for small balances.
+
+Example:
+Gas = $0.30  
+Delta = 0.5%  
+
+RequiredCapital ≈ $60  
+
+If balance < $60 → NOOP.
+
+---
+
+## Layer 3 — Annualized Net Benefit Model
+
+ProjectedAnnualGain = balance × deltaPct
+
+ExpectedAnnualGasCost = gasCost × expectedRotationsPerYear
+
+Rotate only if:
+
+ProjectedAnnualGain > ExpectedAnnualGasCost
+
+This ensures long-term profitability.
+
+---
+
+## Layer 4 — Trend Persistence Filter
+
+The agent stores APR history.
+
+Rotate only if:
+
+- Delta persists for N consecutive checks  
+OR  
+- Delta trend is increasing  
+
+This avoids flip-flop behavior and noise chasing.
+
+---
+
+# Execution Modes
+
+The user chooses execution mode:
+
+- manual_confirm → approve inside DApp
+- telegram_approval → approve via Telegram
+- auto → fully automatic within rules
+
+Telegram mode is toggleable.
+
+---
+
+# Telegram Approval Flow
+
+If execution.mode = telegram_approval:
+
+1. Decision engine outputs ROTATE
+2. Telegram message is sent with:
+   - from protocol
+   - to protocol
+   - delta
+   - gas estimate
+   - projected annual gain
+3. User clicks Approve or Reject
+4. Only if approved, execution proceeds
+5. If rejected or timeout → cancel
+
+This adds human-in-the-loop control for retail users.
+
+---
+
+# User Flow
+
+1. Connect wallet
+2. View Agent Wallet address
+3. Transfer USDC to Agent Wallet
+4. Configure rules
+5. Click Run Check
+6. View:
+   - APR values
+   - delta
+   - gas estimate
+   - projected annual gain
+   - decision + reasoning
+7. Approve execution (UI or Telegram)
+8. View transaction hash
+9. View move history
+
+---
+
+# Example Scenario
+
+## Case A — $1000 balance
+
+Delta = 0.3%
+
+ProjectedAnnualGain = $3
+
+Gas = $0.30  
+4 rotations/year = $1.20  
+
+Net ≈ $1.80  
+
+Agent may rotate only if delta persists.
+
+---
+
+## Case B — $5000 balance
+
+Delta = 0.5%
+
+ProjectedAnnualGain = $25
+
+Gas ≈ $1.20 annually  
+
+Net ≈ $23.80  
+
+Agent ROTATE justified.
+
+---
+
+# Architecture Overview
+
 Frontend:
-- Next.js DApp UI
-- Wallet connection via wagmi or ethers BrowserProvider
+- Next.js DApp
 
 Backend:
-- Next.js API routes for:
-  - rules persistence
-  - autopilot state
-  - runOnce decision
-  - telegram approval webhook
+- Next.js API routes
+- JSON storage (rules, state, history)
 
 On-chain:
-- ethers.js signer using Agent Wallet private key (testnet only)
-- interacts with Aave and Compound contracts on testnet
+- ethers.js
+- Agent Wallet signer
+- Aave and Compound contracts (testnet)
 
-Storage:
-- JSON store for rules, state, moves, approvals
+Telegram:
+- Bot API
+- Inline approval buttons
+- Webhook handler
 
-## Local Setup
-### 1) Install
-npm install
+---
 
-### 2) Env
-Create `.env.local`:
+# Business Model
 
-RPC_URL=
-NEXT_PUBLIC_CHAIN_ID=
-AGENT_PRIVATE_KEY=
-
-USDC_ADDRESS=
-AAVE_POOL_ADDRESS=
-COMPOUND_COMET_ADDRESS=
-
-TELEGRAM_BOT_TOKEN=
-TELEGRAM_WEBHOOK_SECRET=
-
-### 3) Run
-npm run dev
-
-Open:
-http://localhost:3000
-
-## Demo Script (Presentation Day)
-1. Open DApp
-2. Connect wallet
-3. Show Agent Wallet address
-4. Fund Agent Wallet with testnet USDC
-5. Configure rules (min APR delta 1%, max moves/day 1)
-6. Set execution mode to telegram_approval
-7. Click Run Check Now and show Pending Telegram Approval
-8. Approve on Telegram
-9. Return to DApp and show tx hash + updated state
-10. Show Move history table
-
-## Business Model
 Freemium:
-- manual checks
-- 1 move/day
+- Manual checks
+- Limited moves/day
 
-Pro subscription:
-- higher-frequency checks
-- advanced rules and analytics
-- unlimited moves within caps
+Pro:
+- Higher frequency monitoring
+- Advanced rule customization
+- Full Telegram integration
 
 Future:
-- performance fee based on yield uplift vs baseline
-- DAO treasury tier
+- Performance-based fee
 
-## Roadmap
-- multi-chain and multi-asset support
-- protocol allowlist expansion
-- volatility-aware risk scoring
-- DAO treasury dashboard
-- agent access analytics dashboard
+---
+
+# Roadmap
+
+- Multi-asset
+- Multi-chain
+- Volatility detection
+- Smart treasury mode

@@ -1,0 +1,10 @@
+{
+  "minDeltaPct": 0.4,
+  "confidenceThreshold": 0.6,
+  "minPersistenceChecks": 4,
+  "cooldownMinutes": 60,
+  "maxGasUsdPerMove": 2.0,
+  "maxTotalValueUsd": 50000,
+  "maxMovesPerYear": 52,
+  "executionMode": "manual_confirm"
+}

@@ -1,47 +1,53 @@
+import dappStyles from '../styles/Dapp.module.css';
+
 export default function HistoryTable({ history }) {
   if (!history || history.length === 0) {
     return (
-      <div style={styles.card}>
-        <h2 style={styles.title}>Move History</h2>
-        <p style={{ color: '#555', textAlign: 'center', padding: 24 }}>No moves yet. Run a check to start.</p>
+      <div className={dappStyles.glassCard}>
+        <div className={dappStyles.cardHeader} style={{ marginBottom: 0 }}>
+          <h2 className={dappStyles.cardTitle}>Execution Log</h2>
+        </div>
+        <p style={{ color: '#94a3b8', textAlign: 'center', padding: '40px 0', fontSize: '0.95rem' }}>No automated executions yet. The AI agent is monitoring conditions.</p>
       </div>
     );
   }
 
   return (
-    <div style={styles.card}>
-      <h2 style={styles.title}>Move History</h2>
-      <div style={{ overflowX: 'auto' }}>
+    <div className={dappStyles.glassCard}>
+      <div className={dappStyles.cardHeader}>
+        <h2 className={dappStyles.cardTitle}>Execution Log</h2>
+      </div>
+      <div style={{ overflowX: 'auto', margin: '0 -24px -24px -24px' }}>
         <table style={styles.table}>
           <thead>
             <tr>
-              {['Time', 'Action', 'From → To', 'Delta', 'Confidence', 'Net Annual', 'Tx Hash'].map(h => (
+              {['Time', 'Action', 'From → To', 'Yield Delta', 'AI Confidence', 'Net Annual', 'Tx Hash'].map(h => (
                 <th key={h} style={styles.th}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {history.map((entry, i) => (
-              <tr key={i} style={{ borderBottom: '1px solid #1a1a2e' }}>
+              <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: i % 2 === 0 ? 'rgba(0,0,0,0.1)' : 'transparent' }}>
                 <td style={styles.td}>{formatTime(entry.executedAt || entry.timestamp)}</td>
                 <td style={styles.td}>
-                  <span style={{ ...styles.badge, background: entry.action === 'ROTATE' ? '#00d395' : '#333', color: entry.action === 'ROTATE' ? '#000' : '#888' }}>
+                  <span style={{ ...styles.badge, background: entry.action === 'ROTATE' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.1)', color: entry.action === 'ROTATE' ? '#10b981' : '#cbd5e1' }}>
                     {entry.action}
                   </span>
                 </td>
-                <td style={styles.td}>
+                <td style={{ ...styles.td, fontWeight: 600 }}>
                   {entry.from && entry.to ? `${entry.from.toUpperCase()} → ${entry.to.toUpperCase()}` : '—'}
                 </td>
                 <td style={styles.td}>{entry.deltaPct != null ? `+${entry.deltaPct.toFixed(3)}%` : '—'}</td>
                 <td style={styles.td}>{entry.confidenceScore?.toFixed(2) ?? '—'}</td>
-                <td style={{ ...styles.td, color: (entry.netAnnualGain || 0) >= 0 ? '#00d395' : '#ff4444' }}>
+                <td style={{ ...styles.td, color: (entry.netAnnualGain || 0) >= 0 ? '#10b981' : '#ef4444', fontWeight: 600 }}>
                   {entry.netAnnualGain != null ? `${entry.netAnnualGain >= 0 ? '+' : ''}$${entry.netAnnualGain.toFixed(2)}` : '—'}
                 </td>
                 <td style={styles.td}>
                   {entry.txHash
-                    ? <a href={`https://sepolia.etherscan.io/tx/${entry.txHash}`} target="_blank" rel="noreferrer" style={{ color: '#4f46e5', fontSize: 12 }}>
-                        {entry.txHash.slice(0, 8)}...
-                      </a>
+                    ? <a href={`https://sepolia.etherscan.io/tx/${entry.txHash}`} target="_blank" rel="noreferrer" style={{ color: '#6366f1', textDecoration: 'none', fontWeight: 600 }}>
+                      {entry.txHash.slice(0, 8)}...
+                    </a>
                     : '—'}
                 </td>
               </tr>
@@ -55,14 +61,14 @@ export default function HistoryTable({ history }) {
 
 function formatTime(ts) {
   if (!ts) return '—';
-  return new Date(ts).toLocaleString();
+  return new Date(ts).toLocaleString(undefined, {
+    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+  });
 }
 
 const styles = {
-  card: { background: '#1a1a2e', border: '1px solid #2a2a4a', borderRadius: 12, padding: '20px 24px', marginBottom: 16 },
-  title: { margin: '0 0 16px', fontSize: 16, color: '#888', textTransform: 'uppercase', letterSpacing: 1 },
-  table: { width: '100%', borderCollapse: 'collapse', fontSize: 13 },
-  th: { padding: '8px 12px', textAlign: 'left', color: '#666', fontWeight: 600, borderBottom: '1px solid #2a2a4a', whiteSpace: 'nowrap' },
-  td: { padding: '10px 12px', color: '#ccc', whiteSpace: 'nowrap' },
-  badge: { padding: '3px 8px', borderRadius: 4, fontWeight: 700, fontSize: 11 },
+  table: { width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' },
+  th: { padding: '12px 24px', textAlign: 'left', color: '#94a3b8', fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.1)', whiteSpace: 'nowrap', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px' },
+  td: { padding: '16px 24px', color: '#f8fafc', whiteSpace: 'nowrap' },
+  badge: { padding: '4px 10px', borderRadius: 6, fontWeight: 700, fontSize: '0.75rem', letterSpacing: '0.5px' },
 };

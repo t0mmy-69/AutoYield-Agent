@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import AgentWalletPanel from '../components/AgentWalletPanel';
 import APRPanel from '../components/APRPanel';
 import DecisionPanel from '../components/DecisionPanel';
@@ -6,6 +7,7 @@ import ApprovalPanel from '../components/ApprovalPanel';
 import RulesPanel from '../components/RulesPanel';
 import HistoryTable from '../components/HistoryTable';
 import TelegramPanel from '../components/TelegramPanel';
+import ProtocolPanel from '../components/ProtocolPanel';
 
 export default function Dashboard() {
   const [state, setState] = useState(null);
@@ -41,7 +43,6 @@ export default function Dashboard() {
     fetchRules();
     fetchHistory();
     fetchAPR();
-    // Poll state every 30s to detect Telegram approvals
     const interval = setInterval(() => { fetchState(); fetchHistory(); }, 30000);
     return () => clearInterval(interval);
   }, [fetchState, fetchRules, fetchHistory, fetchAPR]);
@@ -80,7 +81,7 @@ export default function Dashboard() {
   };
 
   const handleReject = async () => {
-    const res = await fetch('/api/approve', {
+    await fetch('/api/approve', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ approved: false }),
@@ -98,7 +99,7 @@ export default function Dashboard() {
     if (res.ok) setRules(await res.json());
   };
 
-  // Merge confidence score data from decision into aprData for APRPanel
+  // Enrich APR snapshot with decision analytics for APRPanel display
   const enrichedAprData = aprData ? {
     ...aprData,
     emaDelta: decision?.emaDelta,
@@ -110,8 +111,11 @@ export default function Dashboard() {
   return (
     <div style={styles.page}>
       <div style={styles.header}>
-        <h1 style={styles.logo}>AutoYield Agent</h1>
-        <span style={styles.network}>Sepolia Testnet</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <h1 style={styles.logo}>AutoYield Agent</h1>
+          <span style={styles.network}>Sepolia Testnet</span>
+        </div>
+        <Link href="/admin" style={styles.adminLink}>Admin</Link>
       </div>
 
       {error && <div style={styles.error}>{error}</div>}
@@ -137,6 +141,8 @@ export default function Dashboard() {
         />
       </div>
 
+      <ProtocolPanel aprs={aprData?.aprs || {}} />
+
       <RulesPanel rules={rules} onSave={handleSaveRules} />
       <TelegramPanel />
       <HistoryTable history={history} />
@@ -145,10 +151,11 @@ export default function Dashboard() {
 }
 
 const styles = {
-  page: { maxWidth: 960, margin: '0 auto', padding: '24px 16px', fontFamily: 'system-ui, -apple-system, sans-serif', background: '#0f0f1e', minHeight: '100vh', color: '#eee' },
+  page: { maxWidth: 1040, margin: '0 auto', padding: '24px 16px', fontFamily: 'system-ui, -apple-system, sans-serif', background: '#0f0f1e', minHeight: '100vh', color: '#eee' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
   logo: { margin: 0, fontSize: 24, fontWeight: 800, color: '#fff' },
   network: { background: '#1a1a2e', border: '1px solid #2a2a4a', padding: '4px 12px', borderRadius: 6, fontSize: 13, color: '#888' },
+  adminLink: { background: '#4f46e520', color: '#4f46e5', border: '1px solid #4f46e540', padding: '6px 16px', borderRadius: 8, fontSize: 13, fontWeight: 700, textDecoration: 'none' },
   twoCol: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 0 },
   error: { background: '#2a1010', border: '1px solid #ff4444', borderRadius: 8, padding: '10px 16px', color: '#ff4444', marginBottom: 16, fontSize: 14 },
 };

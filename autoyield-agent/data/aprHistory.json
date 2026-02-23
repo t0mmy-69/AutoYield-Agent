@@ -3,24 +3,6 @@
     "aaveAPR": 4.2,
     "compoundAPR": 3.6,
     "delta": 0.6,
-    "timestamp": 1771836492372
-  },
-  {
-    "aaveAPR": 4.2,
-    "compoundAPR": 3.6,
-    "delta": 0.6,
-    "timestamp": 1771836493359
-  },
-  {
-    "aaveAPR": 4.2,
-    "compoundAPR": 3.6,
-    "delta": 0.6,
-    "timestamp": 1771836493379
-  },
-  {
-    "aaveAPR": 4.2,
-    "compoundAPR": 3.6,
-    "delta": 0.6,
     "timestamp": 1771836494149
   },
   {
@@ -70,5 +52,23 @@
     "compoundAPR": 3.6,
     "delta": 0.6,
     "timestamp": 1771837508919
+  },
+  {
+    "aaveAPR": 4.2,
+    "compoundAPR": 3.6,
+    "delta": 0.6,
+    "timestamp": 1771847179054
+  },
+  {
+    "aaveAPR": 4.2,
+    "compoundAPR": 3.6,
+    "delta": 0.6,
+    "timestamp": 1771849534039
+  },
+  {
+    "aaveAPR": 4.2,
+    "compoundAPR": 3.6,
+    "delta": 0.6,
+    "timestamp": 1771849792799
   }
 ]

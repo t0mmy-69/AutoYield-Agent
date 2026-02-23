@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
+import Head from 'next/head';
 import AgentWalletPanel from '../components/AgentWalletPanel';
 import APRPanel from '../components/APRPanel';
 import DecisionPanel from '../components/DecisionPanel';
 import ApprovalPanel from '../components/ApprovalPanel';
 import RulesPanel from '../components/RulesPanel';
 import HistoryTable from '../components/HistoryTable';
+import styles from '../styles/Dapp.module.css';
 
 export default function Dashboard() {
   const [state, setState] = useState(null);
@@ -107,46 +109,55 @@ export default function Dashboard() {
   } : null;
 
   return (
-    <div style={styles.page}>
-      <div style={styles.header}>
-        <h1 style={styles.logo}>AutoYield Agent</h1>
-        <span style={styles.network}>Sepolia Testnet</span>
+    <div className={styles.page}>
+      <Head>
+        <title>AutoYield | Dapp Dashboard</title>
+      </Head>
+
+      <header className={styles.header}>
+        <div className={styles.logoArea}>
+          <div className={styles.logoIcon}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2L2 22h20L12 2z" stroke="white" strokeWidth="2" strokeLinejoin="round" />
+            </svg>
+          </div>
+          AutoYield Dapp
+        </div>
+        <div className={styles.networkBadge}>
+          <div className={styles.pulseDot}></div>
+          Sepolia Testnet
+        </div>
+      </header>
+
+      {error && <div className={styles.error}>{error}</div>}
+
+      <div className={styles.mainGrid}>
+        {/* Left Column: Data & Analytics */}
+        <div className={styles.leftCol}>
+          <AgentWalletPanel
+            agentAddress={state?.agentAddress}
+            usdcBalance={state?.usdcBalance}
+            currentProtocol={state?.currentProtocol}
+          />
+          <ApprovalPanel
+            pendingApproval={state?.pendingApproval}
+            onApprove={handleApprove}
+            onReject={handleReject}
+          />
+          <APRPanel aprData={enrichedAprData} />
+          <HistoryTable history={history} />
+        </div>
+
+        {/* Right Column: Controls & Decisions */}
+        <div className={styles.rightCol}>
+          <DecisionPanel
+            decision={decision}
+            onRunCheck={handleRunCheck}
+            loading={loading}
+          />
+          <RulesPanel rules={rules} onSave={handleSaveRules} />
+        </div>
       </div>
-
-      {error && <div style={styles.error}>{error}</div>}
-
-      <AgentWalletPanel
-        agentAddress={state?.agentAddress}
-        usdcBalance={state?.usdcBalance}
-        currentProtocol={state?.currentProtocol}
-      />
-
-      <ApprovalPanel
-        pendingApproval={state?.pendingApproval}
-        onApprove={handleApprove}
-        onReject={handleReject}
-      />
-
-      <div style={styles.twoCol}>
-        <APRPanel aprData={enrichedAprData} />
-        <DecisionPanel
-          decision={decision}
-          onRunCheck={handleRunCheck}
-          loading={loading}
-        />
-      </div>
-
-      <RulesPanel rules={rules} onSave={handleSaveRules} />
-      <HistoryTable history={history} />
     </div>
   );
 }
-
-const styles = {
-  page: { maxWidth: 960, margin: '0 auto', padding: '24px 16px', fontFamily: 'system-ui, -apple-system, sans-serif', background: '#0f0f1e', minHeight: '100vh', color: '#eee' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
-  logo: { margin: 0, fontSize: 24, fontWeight: 800, color: '#fff' },
-  network: { background: '#1a1a2e', border: '1px solid #2a2a4a', padding: '4px 12px', borderRadius: 6, fontSize: 13, color: '#888' },
-  twoCol: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 0 },
-  error: { background: '#2a1010', border: '1px solid #ff4444', borderRadius: 8, padding: '10px 16px', color: '#ff4444', marginBottom: 16, fontSize: 14 },
-};

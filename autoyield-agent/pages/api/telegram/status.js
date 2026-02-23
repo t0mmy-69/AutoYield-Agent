@@ -1,10 +1,23 @@
+import fs from 'fs';
+import path from 'path';
+
+const CONFIG_PATH = path.join(process.cwd(), 'data', 'telegram.json');
+
+function readConfig() {
+  try {
+    return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+  } catch {
+    return { botToken: '', chatId: '' };
+  }
+}
+
 export default function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
 
-  const hasToken = !!process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_BOT_TOKEN !== 'YOUR_BOT_TOKEN_HERE';
-  const hasChatId = !!process.env.TELEGRAM_CHAT_ID && process.env.TELEGRAM_CHAT_ID !== 'YOUR_CHAT_ID_HERE';
+  const stored = readConfig();
+  const hasToken = !!stored.botToken;
+  const hasChatId = !!stored.chatId;
 
-  // Build webhook URL from request host
   const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:3000';
   const protocol = req.headers['x-forwarded-proto'] || (host.includes('localhost') ? 'http' : 'https');
   const webhookUrl = `${protocol}://${host}/api/telegram/webhook`;

@@ -2,16 +2,74 @@ import { useState, useEffect } from 'react';
 
 export default function TelegramPanel() {
   const [status, setStatus] = useState(null);
+  const [config, setConfig] = useState(null);
+
+  // Form fields
+  const [botToken, setBotToken] = useState('');
+  const [chatId, setChatId] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState(null);
+
+  // Test
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState(null);
+
+  // Webhook copy
   const [copied, setCopied] = useState(false);
 
+  const fetchStatus = () =>
+    fetch('/api/telegram/status').then(r => r.json()).then(setStatus).catch(() => {});
+
+  const fetchConfig = () =>
+    fetch('/api/telegram/config').then(r => r.json()).then(d => {
+      setConfig(d);
+      setChatId(d.chatId || '');
+      // Leave botToken blank — user must re-enter to update (security)
+    }).catch(() => {});
+
   useEffect(() => {
-    fetch('/api/telegram/status')
-      .then(r => r.json())
-      .then(setStatus)
-      .catch(() => {});
+    fetchStatus();
+    fetchConfig();
   }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    setSaveMsg(null);
+    try {
+      const body = {};
+      if (botToken.trim()) body.botToken = botToken.trim();
+      if (chatId.trim()) body.chatId = chatId.trim();
+
+      const res = await fetch('/api/telegram/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        setSaveMsg({ ok: true, text: 'Config saved!' });
+        setBotToken('');
+        await fetchStatus();
+        await fetchConfig();
+      } else {
+        setSaveMsg({ ok: false, text: 'Failed to save.' });
+      }
+    } catch {
+      setSaveMsg({ ok: false, text: 'Network error.' });
+    } finally {
+      setSaving(false);
+      setTimeout(() => setSaveMsg(null), 3000);
+    }
+  };
+
+  const handleClear = async () => {
+    if (!confirm('Clear Telegram config? The bot will stop sending approval messages.')) return;
+    await fetch('/api/telegram/config', { method: 'DELETE' });
+    setBotToken('');
+    setChatId('');
+    setTestResult(null);
+    await fetchStatus();
+    await fetchConfig();
+  };
 
   const handleTest = async () => {
     setTesting(true);
@@ -20,12 +78,12 @@ export default function TelegramPanel() {
       const res = await fetch('/api/telegram/test', { method: 'POST' });
       const data = await res.json();
       if (res.ok) {
-        setTestResult({ ok: true, message: `Connected as @${data.botUsername} (${data.botName}). Test message sent!` });
+        setTestResult({ ok: true, text: `✓ Connected as @${data.botUsername}. Test message sent!` });
       } else {
-        setTestResult({ ok: false, message: data.error });
+        setTestResult({ ok: false, text: `✗ ${data.error}` });
       }
     } catch {
-      setTestResult({ ok: false, message: 'Network error — could not reach Telegram API.' });
+      setTestResult({ ok: false, text: '✗ Network error.' });
     } finally {
       setTesting(false);
     }
@@ -40,108 +98,125 @@ export default function TelegramPanel() {
   };
 
   const isConfigured = status?.configured;
+  const canSave = botToken.trim() || chatId.trim();
 
   return (
-    <div style={styles.card}>
-      <div style={styles.headerRow}>
-        <h2 style={styles.title}>Telegram Integration</h2>
-        <span style={isConfigured ? styles.badgeOk : styles.badgeWarn}>
-          {isConfigured ? '● Connected' : '● Not Configured'}
+    <div style={s.card}>
+      {/* Header */}
+      <div style={s.headerRow}>
+        <h2 style={s.title}>Telegram Bot</h2>
+        <span style={isConfigured ? s.badgeOk : s.badgeWarn}>
+          {isConfigured ? '● Connected' : '● Not Connected'}
         </span>
       </div>
 
-      {/* Status Checklist */}
-      <div style={styles.checkList}>
-        <div style={styles.checkRow}>
-          <span style={status?.hasToken ? styles.checkOk : styles.checkFail}>
-            {status?.hasToken ? '✓' : '✗'}
-          </span>
-          <span style={styles.checkLabel}>
-            <code>TELEGRAM_BOT_TOKEN</code> in <code>.env.local</code>
-          </span>
+      <p style={s.desc}>
+        Mỗi người tự tạo bot Telegram của mình qua <strong>@BotFather</strong>, nhập token + chat ID vào đây.
+        Bot đó sẽ gửi lệnh approve/reject thẳng vào agent wallet của bạn.
+      </p>
+
+      {/* Config Form */}
+      <div style={s.formSection}>
+        <p style={s.sectionLabel}>Bot Configuration</p>
+        <div style={s.formGrid}>
+          <label style={s.field}>
+            <span style={s.fieldLabel}>
+              Bot Token
+              {config?.hasToken && <span style={s.configured}> ✓ đã lưu ({config.maskedToken})</span>}
+            </span>
+            <input
+              type="password"
+              placeholder={config?.hasToken ? 'Nhập để thay đổi token...' : 'Lấy từ @BotFather → /newbot'}
+              value={botToken}
+              onChange={e => setBotToken(e.target.value)}
+              style={s.input}
+              autoComplete="off"
+            />
+          </label>
+          <label style={s.field}>
+            <span style={s.fieldLabel}>
+              Chat ID
+              {config?.hasChatId && <span style={s.configured}> ✓ đã lưu</span>}
+            </span>
+            <input
+              type="text"
+              placeholder="VD: 123456789 (dùng @userinfobot để lấy)"
+              value={chatId}
+              onChange={e => setChatId(e.target.value)}
+              style={s.input}
+            />
+          </label>
         </div>
-        <div style={styles.checkRow}>
-          <span style={status?.hasChatId ? styles.checkOk : styles.checkFail}>
-            {status?.hasChatId ? '✓' : '✗'}
-          </span>
-          <span style={styles.checkLabel}>
-            <code>TELEGRAM_CHAT_ID</code> in <code>.env.local</code>
-          </span>
+
+        <div style={s.btnRow}>
+          <button onClick={handleSave} disabled={saving || !canSave} style={s.saveBtn}>
+            {saving ? 'Saving...' : 'Save Config'}
+          </button>
+          {isConfigured && (
+            <button onClick={handleClear} style={s.clearBtn}>Clear</button>
+          )}
+          {saveMsg && (
+            <span style={saveMsg.ok ? s.msgOk : s.msgFail}>{saveMsg.text}</span>
+          )}
         </div>
       </div>
 
-      {/* Setup Instructions (shown when not configured) */}
-      {!isConfigured && (
-        <div style={styles.instructions}>
-          <p style={styles.instrTitle}>Setup Guide</p>
-          <ol style={styles.ol}>
-            <li>Open Telegram and message <strong>@BotFather</strong></li>
-            <li>Send <code>/newbot</code> and follow the prompts to get your <strong>Bot Token</strong></li>
-            <li>Start a chat with your new bot, then visit:<br />
-              <code>https://api.telegram.org/bot&lt;TOKEN&gt;/getUpdates</code><br />
-              to find your <strong>Chat ID</strong> in the JSON response
-            </li>
-            <li>Add to <code>.env.local</code>:
-              <pre style={styles.pre}>{`TELEGRAM_BOT_TOKEN=123456:ABC-...
-TELEGRAM_CHAT_ID=987654321`}</pre>
-            </li>
-            <li>Restart the dev server: <code>npm run dev</code></li>
-            <li>Register the webhook URL below with Telegram (see Webhook section)</li>
-          </ol>
-        </div>
-      )}
+      {/* How to get Chat ID */}
+      <div style={s.hint}>
+        <strong>Lấy Chat ID:</strong> Nhắn tin bất kỳ cho bot của bạn, rồi mở URL:<br />
+        <code style={s.hintCode}>https://api.telegram.org/bot&lt;TOKEN&gt;/getUpdates</code><br />
+        → tìm <code>"chat": &#123; "id": 123456789 &#125;</code>. Hoặc nhắn <code>/start</code> cho <strong>@userinfobot</strong>.
+      </div>
 
       {/* Webhook URL */}
       {status?.webhookUrl && (
-        <div style={styles.section}>
-          <p style={styles.sectionLabel}>Webhook URL</p>
-          <div style={styles.webhookRow}>
-            <code style={styles.webhookUrl}>{status.webhookUrl}</code>
-            <button onClick={handleCopy} style={styles.copyBtn}>
+        <div style={s.section}>
+          <p style={s.sectionLabel}>Webhook URL</p>
+          <div style={s.webhookRow}>
+            <code style={s.webhookUrl}>{status.webhookUrl}</code>
+            <button onClick={handleCopy} style={s.copyBtn}>
               {copied ? 'Copied!' : 'Copy'}
             </button>
           </div>
-          <p style={styles.hint}>
-            Register this URL with Telegram by visiting:<br />
-            <code style={styles.hintCode}>
+          <p style={s.smallHint}>
+            Đăng ký webhook với Telegram (cần domain public/ngrok):<br />
+            <code style={s.hintCode}>
               {`https://api.telegram.org/bot<TOKEN>/setWebhook?url=${status.webhookUrl}`}
             </code>
           </p>
         </div>
       )}
 
-      {/* Approval Flow Description */}
-      <div style={styles.section}>
-        <p style={styles.sectionLabel}>How Telegram Approval Works</p>
-        <div style={styles.flowSteps}>
+      {/* Approval Flow */}
+      <div style={s.section}>
+        <p style={s.sectionLabel}>Approval Flow</p>
+        <div style={s.flow}>
           {[
-            { step: '1', text: 'Agent runs check → decision is ROTATE' },
-            { step: '2', text: 'Telegram message sent with: from/to protocol, delta %, gas cost, projected annual gain' },
-            { step: '3', text: 'You tap ✅ Approve or ❌ Reject inline' },
-            { step: '4', text: 'If approved → rotation executes on-chain' },
-            { step: '5', text: 'If rejected or timeout → NOOP logged to history' },
-          ].map(({ step, text }) => (
-            <div key={step} style={styles.flowRow}>
-              <span style={styles.flowNum}>{step}</span>
-              <span style={styles.flowText}>{text}</span>
+            'Agent chạy check → quyết định ROTATE',
+            'Bot gửi message vào Telegram của bạn (delta %, gas, projected gain)',
+            'Bạn bấm ✅ Approve hoặc ❌ Reject ngay trong Telegram',
+            'Nếu approve → rotation thực thi on-chain',
+            'Nếu reject / timeout → NOOP ghi vào history',
+          ].map((text, i) => (
+            <div key={i} style={s.flowRow}>
+              <span style={s.flowNum}>{i + 1}</span>
+              <span style={s.flowText}>{text}</span>
             </div>
           ))}
         </div>
-        <p style={styles.hint}>
-          Enable this in <strong>Agent Rules</strong> → set <em>Execution Mode</em> to <strong>Telegram Approval</strong>.
+        <p style={s.smallHint}>
+          Bật ở <strong>Agent Rules</strong> → <em>Execution Mode</em>: <strong>Telegram Approval</strong>
         </p>
       </div>
 
-      {/* Test Button */}
+      {/* Test Connection */}
       {isConfigured && (
-        <div style={styles.testSection}>
-          <button onClick={handleTest} disabled={testing} style={styles.testBtn}>
-            {testing ? 'Sending...' : 'Send Test Message'}
+        <div style={s.testRow}>
+          <button onClick={handleTest} disabled={testing} style={s.testBtn}>
+            {testing ? 'Sending...' : '📨 Send Test Message'}
           </button>
           {testResult && (
-            <span style={testResult.ok ? styles.testOk : styles.testFail}>
-              {testResult.ok ? '✓ ' : '✗ '}{testResult.message}
-            </span>
+            <span style={testResult.ok ? s.msgOk : s.msgFail}>{testResult.text}</span>
           )}
         </div>
       )}
@@ -149,40 +224,41 @@ TELEGRAM_CHAT_ID=987654321`}</pre>
   );
 }
 
-const styles = {
+const s = {
   card: { background: '#1a1a2e', border: '1px solid #2a2a4a', borderRadius: 12, padding: '20px 24px', marginBottom: 16 },
-  headerRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  headerRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   title: { margin: 0, fontSize: 16, color: '#888', textTransform: 'uppercase', letterSpacing: 1 },
   badgeOk: { background: '#0d2b1a', border: '1px solid #1a5c35', color: '#4ade80', padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700 },
   badgeWarn: { background: '#2b1a0d', border: '1px solid #5c3a1a', color: '#fb923c', padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700 },
+  desc: { fontSize: 13, color: '#aaa', margin: '0 0 16px', lineHeight: 1.6 },
 
-  checkList: { display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 },
-  checkRow: { display: 'flex', alignItems: 'center', gap: 10 },
-  checkOk: { color: '#4ade80', fontWeight: 700, fontSize: 14, width: 16 },
-  checkFail: { color: '#f87171', fontWeight: 700, fontSize: 14, width: 16 },
-  checkLabel: { fontSize: 13, color: '#ccc' },
-
-  instructions: { background: '#0f0f1e', border: '1px solid #2a2a4a', borderRadius: 8, padding: '14px 16px', marginBottom: 16 },
-  instrTitle: { margin: '0 0 10px', fontSize: 13, color: '#888', textTransform: 'uppercase', letterSpacing: 1 },
-  ol: { margin: 0, paddingLeft: 20, color: '#bbb', fontSize: 13, lineHeight: 1.8 },
-  pre: { background: '#1a1a2e', border: '1px solid #2a2a4a', borderRadius: 6, padding: '8px 12px', margin: '6px 0', fontSize: 12, color: '#a78bfa', overflowX: 'auto' },
-
-  section: { borderTop: '1px solid #2a2a4a', paddingTop: 14, marginTop: 14, marginBottom: 4 },
+  formSection: { background: '#0f0f1e', border: '1px solid #2a2a4a', borderRadius: 8, padding: '14px 16px', marginBottom: 14 },
   sectionLabel: { margin: '0 0 10px', fontSize: 12, color: '#888', textTransform: 'uppercase', letterSpacing: 1 },
+  formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 },
+  field: { display: 'flex', flexDirection: 'column', gap: 4 },
+  fieldLabel: { fontSize: 12, color: '#888' },
+  configured: { color: '#4ade80', fontWeight: 600 },
+  input: { background: '#1a1a2e', border: '1px solid #2a2a4a', borderRadius: 6, padding: '8px 10px', color: '#eee', fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box' },
+  btnRow: { display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
+  saveBtn: { padding: '8px 20px', background: '#4f46e5', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 13 },
+  clearBtn: { padding: '8px 16px', background: 'transparent', color: '#f87171', border: '1px solid #f87171', borderRadius: 8, cursor: 'pointer', fontSize: 13 },
+  msgOk: { fontSize: 13, color: '#4ade80' },
+  msgFail: { fontSize: 13, color: '#f87171' },
 
-  webhookRow: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 },
-  webhookUrl: { flex: 1, background: '#0f0f1e', border: '1px solid #2a2a4a', borderRadius: 6, padding: '7px 10px', fontSize: 12, color: '#a78bfa', overflowX: 'auto', display: 'block', whiteSpace: 'nowrap' },
-  copyBtn: { padding: '6px 14px', background: '#2a2a4a', color: '#eee', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, whiteSpace: 'nowrap' },
-  hint: { fontSize: 12, color: '#666', marginTop: 6, lineHeight: 1.6 },
+  hint: { fontSize: 12, color: '#666', marginBottom: 14, lineHeight: 1.7, background: '#0f0f1e', border: '1px solid #1e1e3a', borderRadius: 6, padding: '10px 14px' },
   hintCode: { color: '#7c6af7', fontSize: 11, wordBreak: 'break-all' },
 
-  flowSteps: { display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 },
+  section: { borderTop: '1px solid #2a2a4a', paddingTop: 14, marginTop: 14 },
+  webhookRow: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 },
+  webhookUrl: { flex: 1, background: '#0f0f1e', border: '1px solid #2a2a4a', borderRadius: 6, padding: '7px 10px', fontSize: 12, color: '#a78bfa', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' },
+  copyBtn: { padding: '6px 14px', background: '#2a2a4a', color: '#eee', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, whiteSpace: 'nowrap' },
+  smallHint: { fontSize: 12, color: '#666', marginTop: 6, lineHeight: 1.6 },
+
+  flow: { display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 },
   flowRow: { display: 'flex', alignItems: 'flex-start', gap: 10 },
-  flowNum: { background: '#4f46e5', color: '#fff', borderRadius: '50%', width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0, lineHeight: '22px', textAlign: 'center' },
+  flowNum: { background: '#4f46e5', color: '#fff', borderRadius: '50%', width: 22, height: 22, minWidth: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, lineHeight: '22px', textAlign: 'center' },
   flowText: { fontSize: 13, color: '#bbb', paddingTop: 3 },
 
-  testSection: { borderTop: '1px solid #2a2a4a', paddingTop: 14, marginTop: 14, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' },
+  testRow: { borderTop: '1px solid #2a2a4a', paddingTop: 14, marginTop: 14, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' },
   testBtn: { padding: '9px 20px', background: '#4f46e5', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 13 },
-  testOk: { color: '#4ade80', fontSize: 13 },
-  testFail: { color: '#f87171', fontSize: 13 },
 };

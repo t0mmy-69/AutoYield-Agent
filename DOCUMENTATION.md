@@ -3,7 +3,7 @@
 Welcome to the comprehensive system documentation for **AutoYield Agent**. This document serves as the master reference for the project's architecture, core modules, API surface, user interface, and integration points.
 
 > **Last updated:** 2026-02-24
-> **Version:** 3.1 — Any-EVM Sign-In, Testnet Multi-Chain Deposits (ETH Sepolia · Base Sepolia · Arbitrum Sepolia)
+> **Version:** 3.2 — Deposit/Withdraw UI, Telegram Toggle, Admin Delete Controls
 
 ---
 
@@ -219,10 +219,12 @@ Every adapter in `lib/protocols/adapters/` must implement:
 
 | Function | Description |
 |---|---|
-| `getAllProtocols()` | Returns all adapters with runtime overrides applied |
+| `getAllProtocols()` | Returns all adapters with runtime overrides applied; filters out entries marked `deleted: true` |
 | `getEnabledProtocols()` | Returns only enabled protocols |
 | `getProtocol(id)` | Returns a single protocol adapter by ID |
 | `setProtocolEnabled(id, enabled)` | Persists enable/disable to `data/protocols.json` |
+| `deleteProtocol(id)` | Marks protocol as `deleted: true` in `data/protocols.json` — hidden from all registries and APR fetching |
+| `restoreProtocol(id)` | Removes the `deleted` flag from a protocol — restores it to registry |
 | `fetchAllAPRs()` | Fetches APRs from all enabled protocols concurrently |
 
 ---
@@ -249,6 +251,17 @@ Chain configs live in `lib/chains/configs.js`.
 | `base` | Base | 8453 | Disabled |
 | `arbitrum` | Arbitrum One | 42161 | Disabled |
 | `optimism` | Optimism | 10 | Disabled |
+
+### Chain Runtime Overrides (`data/chains.json`)
+
+Like protocols, chain enabled/deleted state can be overridden at runtime without editing source code. The file is managed via the Admin Dashboard → **Chain Registry** table.
+
+| Function | Description |
+|---|---|
+| `getAllChains()` | Returns all chains with runtime overrides applied; filters out `deleted: true` entries |
+| `getEnabledChains()` | Returns only enabled chains |
+| `setChainEnabled(id, enabled)` | Persists enable/disable to `data/chains.json` |
+| `deleteChain(id)` | Marks chain as `deleted: true` — hidden from Admin UI |
 
 ### Adding a New Chain
 
@@ -455,9 +468,19 @@ All state/rules/history endpoints detect the `Authorization: Bearer` header auto
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/api/protocols` | List all protocols with enabled status |
+| `GET` | `/api/protocols` | List all protocols with enabled status (excludes deleted) |
 | `PATCH` | `/api/protocols` | `{ id, enabled: bool }` — toggle a protocol |
-| `GET` | `/api/chains` | List all chains with RPC config status |
+| `DELETE` | `/api/protocols` | `{ id }` — mark protocol as deleted in `data/protocols.json` |
+| `GET` | `/api/chains` | List all chains with RPC config status (excludes deleted) |
+| `PATCH` | `/api/chains` | `{ id, enabled: bool }` — toggle a chain (persists to `data/chains.json`) |
+| `DELETE` | `/api/chains` | `{ id }` — mark chain as deleted in `data/chains.json` |
+
+### Wallet
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/wallet/info` | Bearer | Returns agent wallet address, USDC contract address, chainId — used by frontend to build deposit tx |
+| `POST` | `/api/wallet/withdraw` | Bearer | `{ amount }` — agent wallet signs USDC transfer to user's main wallet address |
 
 ### Credentials
 
@@ -502,14 +525,36 @@ Main operational interface. Requires wallet authentication.
 **Connected state panels:**
 - Header: user address badge, Disconnect button, Admin link
 - Deposit banner: agent wallet address + "Deposit USDC here" hint
-- `AgentWalletPanel` — agent wallet address, USDC balance, active protocol
+- `AgentWalletPanel` — agent wallet address, USDC balance, active protocol, **Deposit** and **Withdraw** buttons (see below)
 - `APRPanel` — live APRs for all enabled protocols with BEST badge, EMA, momentum, confidence
 - `DecisionPanel` — latest decision with run trigger
 - `ApprovalPanel` — approve/reject pending rotations
 - `ProtocolPanel` — all protocol registry entries with live APRs
 - `RulesPanel` — editable decision rules (per-user)
-- `TelegramPanel` — bot configuration
+- `TelegramPanel` — bot configuration with **ON/OFF toggle** for Telegram approval mode
 - `HistoryTable` — execution log (per-user)
+
+#### AgentWalletPanel — Deposit & Withdraw
+
+The `AgentWalletPanel` accepts `token`, `userAddress`, and `onRefresh` props and exposes two fund management flows directly within the panel:
+
+| Button | Flow | How it works |
+|---|---|---|
+| **↓ Deposit** | User main wallet → Agent wallet | Frontend calls `GET /api/wallet/info` to get USDC contract address, then calls `window.ethereum.request({ method: 'eth_sendTransaction' })` to send an ERC-20 USDC transfer — MetaMask signs and broadcasts |
+| **↑ Withdraw** | Agent wallet → User main wallet | Frontend calls `POST /api/wallet/withdraw` with `{ amount }` — backend agent wallet signs and sends USDC back to the user's address |
+
+Both panels show an amount input field, confirmation button, and inline success/error message. `onRefresh` is called after a successful operation to refresh balance state.
+
+**Clipboard copy fix:** Both `AgentWalletPanel` and `TelegramPanel` now use a safe `copyToClipboard()` helper that falls back to `document.execCommand('copy')` when `navigator.clipboard` is unavailable (non-HTTPS contexts, older browsers).
+
+#### TelegramPanel — ON/OFF Toggle
+
+The `TelegramPanel` now accepts a `token` prop and shows a toggle button in the header:
+
+- **Telegram: ON** — `executionMode` is `telegram_approval`; all rotation decisions require Telegram approval before execution
+- **Telegram: OFF** — `executionMode` is `manual_confirm`; approvals are done via the DApp UI
+
+Clicking the toggle calls `PUT /api/rules` with the new `executionMode`, matching the existing rules logic. The toggle state is fetched fresh from `/api/rules` on mount.
 
 **All API calls include `Authorization: Bearer {token}` header.**
 
@@ -520,11 +565,15 @@ Full management and observability interface at `/admin`.
 **Sections:**
 1. **System Overview** — 6-stat grid: wallet, balance, active protocol, rotation count, volume, execution mode
 2. **Live APR Snapshot** — visual APR cards per protocol, manual refresh button
-3. **Protocol Registry** — `ProtocolPanel` with enable/disable toggles
-4. **Chain Registry** — all chains with status (live/upcoming), RPC config indicator, phase
+3. **Protocol Registry** — `ProtocolPanel` with **Enable/Disable** and **Delete** buttons per row
+4. **Chain Registry** — all chains with status (live/upcoming), RPC config indicator, phase, **Enable/Disable** and **Delete** buttons per row
 5. **API Credentials** — per-chain RPC URL + USDC address, per-protocol contract address. Each card shows source badge (`saved` / `env` / `not set`) and a Save button. Saved values are persisted to `data/credentials.json` and override env vars at runtime without server restart.
 6. **Decision Rules** — `RulesPanel` for live rule editing
 7. **Full Execution Log** — complete `HistoryTable`
+
+**Chain & Protocol Delete behavior:**
+- Deleting a chain or protocol marks it as `deleted: true` in the respective data file (`data/chains.json` or `data/protocols.json`). Deleted entries are hidden from all APIs and UI.
+- To restore: manually edit the data file and remove the `deleted` key, or call `restoreProtocol(id)` programmatically.
 
 ---
 
@@ -556,7 +605,8 @@ Global/admin data. Used as fallback when no user session is present.
 | `rules.json` | `{ minDeltaPct, confidenceThreshold, cooldownMinutes, ... }` | Global decision parameters |
 | `aprHistory.json` | `[{ aprs: {...}, best, bestAPR, timestamp }]` | Rolling 24-snapshot APR history |
 | `history.json` | `[{ action, from, to, deltaPct, txHash, ... }]` | Global execution log |
-| `protocols.json` | `{ [id]: { enabled: bool } }` | Runtime protocol overrides |
+| `protocols.json` | `{ [id]: { enabled: bool, deleted?: bool } }` | Runtime protocol overrides. `deleted: true` hides a protocol from all registries. |
+| `chains.json` | `{ [id]: { enabled?: bool, deleted?: bool } }` | Runtime chain overrides. Managed via Admin Dashboard → Chain Registry. |
 | `telegram.json` | `{ botToken, chatId }` | Telegram credentials |
 | `credentials.json` | `{ KEY: value, ... }` | RPC URLs and contract addresses. Overrides env vars. Does **not** store `AGENT_PRIVATE_KEY`. |
 
@@ -686,6 +736,50 @@ The SQLite database (`data/autoyield.db`) is created automatically on first run.
 ---
 
 ## 14. Changelog
+
+### 2026-02-24 — v3.2: Deposit/Withdraw UI, Telegram Toggle, Admin Delete Controls
+
+**Bug fix: `navigator.clipboard.writeText` crash**
+- `AgentWalletPanel.jsx` and `TelegramPanel.jsx` both called `navigator.clipboard.writeText()` directly. This throws a `TypeError` in non-HTTPS contexts (HTTP dev, certain browsers) where `navigator.clipboard` is `undefined`.
+- **Fix:** Replaced direct call with a `copyToClipboard(text)` helper that wraps `navigator.clipboard.writeText` in a try/catch and falls back to a temporary `<textarea>` + `document.execCommand('copy')`.
+
+**New: Deposit & Withdraw UI in `AgentWalletPanel`**
+- Panel now accepts `token`, `userAddress`, and `onRefresh` props from `dapp.js`.
+- **↓ Deposit** button: user enters USDC amount → frontend fetches USDC contract address from `GET /api/wallet/info` → calls `window.ethereum.request({ method: 'eth_sendTransaction' })` to send ERC-20 transfer via MetaMask. No backend signing required.
+- **↑ Withdraw** button: user enters USDC amount → calls `POST /api/wallet/withdraw` with Bearer token → backend agent wallet signs USDC transfer to user's main wallet address.
+- Both panels collapse/expand independently, show inline success/error feedback, and call `onRefresh()` after completion.
+
+**New: `GET /api/wallet/info`** (`pages/api/wallet/info.js`)
+- Auth-protected. Returns `{ agentAddress, chainId, chainNumericId, chainName, usdcAddress }` for the user's current agent wallet chain.
+- Used by the Deposit UI to obtain the USDC contract address before constructing the MetaMask transaction.
+
+**New: `POST /api/wallet/withdraw`** (`pages/api/wallet/withdraw.js`)
+- Auth-protected. Body: `{ amount: string }`.
+- Validates amount > 0, checks agent USDC balance ≥ requested amount.
+- Uses `getUserSigner(userId, chainId)` to sign and broadcast `usdc.transfer(user.address, amountWei)`.
+- Returns `{ success, txHash, to, amount }` on success.
+
+**New: Telegram ON/OFF toggle in `TelegramPanel`**
+- Panel now accepts `token` prop (passed from `dapp.js`).
+- Fetches current `executionMode` from `GET /api/rules` on mount.
+- Toggle button in panel header: **Telegram: ON** (`executionMode = 'telegram_approval'`) / **Telegram: OFF** (`executionMode = 'manual_confirm'`).
+- Clicking toggle: fetches full current rules → merges new `executionMode` → `PUT /api/rules`. No page navigation required.
+
+**New: Protocol Delete in Admin (`ProtocolPanel` + `lib/protocols/index.js` + `/api/protocols`)**
+- `lib/protocols/index.js` — new `deleteProtocol(id)`: sets `{ deleted: true, enabled: false }` in `data/protocols.json`. `restoreProtocol(id)` clears the flag.
+- `getAllProtocols()` now filters out entries with `deleted: true`.
+- `pages/api/protocols.js` — new `DELETE` method: `{ id }` → calls `deleteProtocol(id)`.
+- `ProtocolPanel.jsx` — when `showToggle=true`, each row shows both **Enable/Disable** and **Delete** buttons in separate `<td>` columns (guarded by `confirm()` dialog).
+
+**New: Chain Enable/Disable + Delete in Admin (`lib/chains/configs.js` + `/api/chains` + `admin.js`)**
+- `lib/chains/configs.js` — new `data/chains.json` runtime override file (same pattern as protocols):
+  - `getAllChains()` reads overrides, filters `deleted: true`, merges `enabled` state.
+  - `setChainEnabled(id, enabled)` — persists to `data/chains.json`.
+  - `deleteChain(id)` — marks `{ deleted: true, enabled: false }` in `data/chains.json`.
+- `pages/api/chains.js` — added `PATCH` (`{ id, enabled }`) and `DELETE` (`{ id }`) methods. `GET` now also reads from credentials file for RPC config check.
+- `pages/admin.js` — Chain Registry table now has two new columns: **Control** (Enable/Disable toggle) and **Delete** button. State managed via `chainToggling` and `chainDeleting` local state.
+
+---
 
 ### 2026-02-24 — v3.1: Any-EVM Sign-In + Testnet Multi-Chain Deposits
 

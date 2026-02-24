@@ -1,11 +1,14 @@
 # AutoYield Agent DApp
-Retail DeFi Auto-Pilot with Capital-Aware Decision Engine — v3.1
+Retail DeFi Auto-Pilot with Capital-Aware Decision Engine — v3.2
 
 AutoYield Agent is a browser-based DApp that creates a **dedicated Agent Wallet per user** and optimizes USDC yield across **N lending protocols on multiple chains** in a rational, gas-aware, and transparent way.
 
 - **Multi-user:** Each user connects their wallet (MetaMask SIWE), gets a personal agent wallet, and has isolated state/rules/history stored in SQLite.
 - **Any-EVM sign-in:** Connect from any EVM network (Polygon, mainnet, Arbitrum, etc.) — no network switching required.
 - **24/7 automation:** Background scheduler checks all users every 5 minutes and executes rotations automatically (or sends Telegram approval requests).
+- **Deposit & Withdraw:** Direct USDC deposit from MetaMask to agent wallet and withdraw back to user wallet — built into the Agent Wallet panel.
+- **Telegram toggle:** One-click ON/OFF toggle in the Telegram panel to switch between `telegram_approval` and `manual_confirm` execution modes.
+- **Admin delete controls:** Protocol and Chain Registry now have Delete buttons to remove entries at runtime without editing source code.
 - **Phase 1:** Testnets — Ethereum Sepolia, Base Sepolia, Arbitrum Sepolia — Aave V3 + Compound V3.
 - **Phase 2:** Mainnets — Ethereum, Arbitrum, Optimism, Base — Radiant, Morpho adapters.
 
@@ -177,7 +180,7 @@ The user chooses execution mode:
 - telegram_approval → approve via Telegram
 - auto → fully automatic within rules
 
-Telegram mode is toggleable.
+Telegram mode has a dedicated ON/OFF toggle button in the Telegram panel — no need to navigate to Rules.
 
 ---
 
@@ -204,18 +207,21 @@ This adds human-in-the-loop control for retail users.
 
 1. Open `/dapp` → click **Connect with MetaMask**
 2. Sign the SIWE challenge in MetaMask (no gas, off-chain signature)
-3. View your **Agent Wallet address** in the deposit banner
-4. Transfer USDC to your Agent Wallet on any supported testnet (Ethereum Sepolia, Base Sepolia, or Arbitrum Sepolia)
+3. View your **Agent Wallet address** in the deposit banner or Agent Wallet panel
+4. Click **↓ Deposit** in the Agent Wallet panel → enter USDC amount → confirm in MetaMask
+   - *(Or manually transfer USDC to the agent address on Sepolia, Base Sepolia, or Arbitrum Sepolia)*
 5. Configure rules (min delta, cooldown, execution mode, etc.)
-6. Click **Run Check** or wait for the 24/7 scheduler (every 5 min)
-7. View decision details:
+6. Enable Telegram approval via the **Telegram: ON** toggle, or leave on Manual Confirm
+7. Click **Run Check** or wait for the 24/7 scheduler (every 5 min)
+8. View decision details:
    - APR values (live and EMA-smoothed)
    - Delta and momentum direction
    - Confidence score
    - Gas estimate and projected annual gain
    - Plain-language reason for ROTATE or NOOP
-8. Approve execution via UI button or **Telegram** inline button
-9. View transaction hashes and full move history
+9. Approve execution via UI button or **Telegram** inline button
+10. View transaction hashes and full move history
+11. Click **↑ Withdraw** anytime to send USDC back from agent to your main wallet
 
 ---
 
@@ -260,11 +266,12 @@ Frontend:
 Backend:
 - Next.js API routes
 - **SQLite** (`better-sqlite3`) — per-user data (state, rules, history, agent wallets, auth nonces)
-- JSON files — global/admin data (protocol config, credentials, APR history)
+- JSON files — global/admin data (protocol config, chain config, credentials, APR history)
 - **SIWE-lite auth** — EIP-191 personal_sign + HMAC-SHA256 session tokens
 - **24/7 Scheduler** — `setInterval(5min)` started via Next.js instrumentation hook
-- Protocol Adapter Registry (`lib/protocols/`)
-- Chain Configuration Registry (`lib/chains/`)
+- Protocol Adapter Registry (`lib/protocols/`) — runtime enable/disable/delete via `data/protocols.json`
+- Chain Configuration Registry (`lib/chains/`) — runtime enable/disable/delete via `data/chains.json`
+- Wallet API (`/api/wallet/info`, `/api/wallet/withdraw`) — deposit info and agent→user USDC withdrawal
 
 On-chain:
 - ethers.js v6

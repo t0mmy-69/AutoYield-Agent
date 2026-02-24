@@ -76,19 +76,22 @@ export default function AdminDashboard() {
   const [credSaving, setCredSaving] = useState(null); // group id being saved
   const [chainToggling, setChainToggling] = useState(null);
   const [chainDeleting, setChainDeleting] = useState(null);
+  const [agents, setAgents] = useState([]);
 
   const load = useCallback(async () => {
-    const [stateRes, rulesRes, historyRes, chainsRes, credRes] = await Promise.all([
+    const [stateRes, rulesRes, historyRes, chainsRes, credRes, agentsRes] = await Promise.all([
       fetch('/api/state'),
       fetch('/api/rules'),
       fetch('/api/history'),
       fetch('/api/chains'),
       fetch('/api/credentials'),
+      fetch('/api/admin/agents'),
     ]);
     if (stateRes.ok) setState(await stateRes.json());
     if (rulesRes.ok) setRules(await rulesRes.json());
     if (historyRes.ok) setHistory(await historyRes.json());
     if (chainsRes.ok) setChains(await chainsRes.json());
+    if (agentsRes.ok) setAgents(await agentsRes.json());
     if (credRes.ok) {
       const list = await credRes.json();
       const map = {};
@@ -200,6 +203,71 @@ export default function AdminDashboard() {
           <StatCard label="Total Rotations" value={totalRotations} sub="All time" color="#f59e0b" />
           <StatCard label="Volume Rotated" value={`$${totalVolume.toFixed(0)}`} sub="USDC all time" color="#10b981" />
           <StatCard label="Execution Mode" value={rules?.executionMode?.replace('_', ' ') || '—'} sub="Current setting" color="#6366f1" />
+        </div>
+      </section>
+
+      {/* Registered Agents */}
+      <section style={styles.section}>
+        <div style={{ margin: '0 0 16px 4px' }}>
+          <h2 style={styles.sectionTitle}>Registered Agents</h2>
+          <p style={styles.sectionDesc}>{agents.length} user{agents.length !== 1 ? 's' : ''} registered. Each user has a dedicated agent wallet managed by the system.</p>
+        </div>
+        <div className={dappStyles.glassCard}>
+          {agents.length === 0 ? (
+            <div style={styles.emptyState}>No agents registered yet. Users must sign in via the DApp to create their agent wallet.</div>
+          ) : (
+            <div style={{ overflowX: 'auto', margin: '0 -24px -24px -24px' }}>
+              <table style={styles.table}>
+                <thead>
+                  <tr>
+                    {['#', 'User Wallet', 'Agent Wallet', 'Chain', 'Protocol', 'Last Move', 'Pending'].map(h => (
+                      <th key={h} style={styles.th}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {agents.map((a, i) => {
+                    const lastMove = a.lastMoveTimestamp
+                      ? new Date(a.lastMoveTimestamp).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })
+                      : '—';
+                    return (
+                      <tr key={a.userId} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: i % 2 === 0 ? 'rgba(0,0,0,0.1)' : 'transparent' }}>
+                        <td style={{ ...styles.td, color: '#64748b', fontFamily: 'monospace' }}>{a.userId}</td>
+                        <td style={{ ...styles.td, fontFamily: 'monospace', fontSize: '0.82rem', color: '#94a3b8' }}>
+                          {a.userAddress ? `${a.userAddress.slice(0, 10)}...${a.userAddress.slice(-6)}` : '—'}
+                        </td>
+                        <td style={{ ...styles.td, fontFamily: 'monospace', fontSize: '0.82rem', color: '#818cf8' }}>
+                          {a.agentAddress ? `${a.agentAddress.slice(0, 10)}...${a.agentAddress.slice(-6)}` : <span style={{ color: '#ef4444' }}>Not created</span>}
+                        </td>
+                        <td style={styles.td}>
+                          {a.chainId ? (
+                            <span style={{ ...styles.chip, color: CHAIN_COLORS[a.chainId] || '#94a3b8', borderColor: `${CHAIN_COLORS[a.chainId]}40` || 'rgba(255,255,255,0.1)' }}>
+                              {a.chainId}
+                            </span>
+                          ) : '—'}
+                        </td>
+                        <td style={styles.td}>
+                          {a.currentProtocol ? (
+                            <span style={{ ...styles.statusBadge, background: 'rgba(99,102,241,0.1)', color: '#818cf8', borderColor: 'rgba(99,102,241,0.3)' }}>
+                              {a.currentProtocol.toUpperCase()}
+                            </span>
+                          ) : '—'}
+                        </td>
+                        <td style={{ ...styles.td, color: '#94a3b8', fontSize: '0.85rem' }}>{lastMove}</td>
+                        <td style={styles.td}>
+                          {a.hasPendingApproval ? (
+                            <span style={{ ...styles.statusBadge, background: 'rgba(245,158,11,0.1)', color: '#f59e0b', borderColor: 'rgba(245,158,11,0.3)' }}>Pending</span>
+                          ) : (
+                            <span style={{ color: '#64748b', fontSize: '0.85rem' }}>—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </section>
 

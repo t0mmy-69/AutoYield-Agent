@@ -92,14 +92,51 @@ export const CHAINS = {
   },
 };
 
+import fs from 'fs';
+import path from 'path';
+
+const CHAINS_OVERRIDE_FILE = path.join(process.cwd(), 'data', 'chains.json');
+
+function readChainsOverride() {
+  try {
+    return JSON.parse(fs.readFileSync(CHAINS_OVERRIDE_FILE, 'utf8'));
+  } catch {
+    return {};
+  }
+}
+
+function writeChainsOverride(config) {
+  const dir = path.dirname(CHAINS_OVERRIDE_FILE);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(CHAINS_OVERRIDE_FILE, JSON.stringify(config, null, 2));
+}
+
 export function getChain(id) {
   return CHAINS[id] || null;
 }
 
 export function getAllChains() {
-  return Object.values(CHAINS);
+  const overrides = readChainsOverride();
+  return Object.values(CHAINS)
+    .filter(c => !overrides[c.id]?.deleted)
+    .map(c => ({
+      ...c,
+      enabled: overrides[c.id]?.enabled !== undefined ? overrides[c.id].enabled : c.enabled,
+    }));
 }
 
 export function getEnabledChains() {
-  return Object.values(CHAINS).filter(c => c.enabled);
+  return getAllChains().filter(c => c.enabled);
+}
+
+export function setChainEnabled(id, enabled) {
+  const overrides = readChainsOverride();
+  overrides[id] = { ...(overrides[id] || {}), enabled };
+  writeChainsOverride(overrides);
+}
+
+export function deleteChain(id) {
+  const overrides = readChainsOverride();
+  overrides[id] = { ...(overrides[id] || {}), deleted: true, enabled: false };
+  writeChainsOverride(overrides);
 }

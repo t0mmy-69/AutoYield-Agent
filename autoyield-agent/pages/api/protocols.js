@@ -1,4 +1,4 @@
-import { getAllProtocols, setProtocolEnabled } from '../../lib/protocols/index.js';
+import { getAllProtocols, setProtocolEnabled, deleteProtocol } from '../../lib/protocols/index.js';
 
 export default function handler(req, res) {
   if (req.method === 'GET') {
@@ -22,6 +22,13 @@ export default function handler(req, res) {
     }
     setProtocolEnabled(id, enabled);
     return res.status(200).json({ success: true, id, enabled });
+  }
+
+  if (req.method === 'DELETE') {
+    const { id } = req.body;
+    if (!id) return res.status(400).json({ error: 'Required: id (string)' });
+    deleteProtocol(id);
+    return res.status(200).json({ success: true, id, deleted: true });
   }
 
   res.status(405).end();

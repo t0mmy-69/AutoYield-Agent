@@ -25,6 +25,7 @@ const PHASE_LABELS = {
 export default function ProtocolPanel({ aprs = {}, showToggle = false }) {
   const [protocols, setProtocols] = useState([]);
   const [toggling, setToggling] = useState(null);
+  const [deleting, setDeleting] = useState(null);
 
   useEffect(() => {
     fetch('/api/protocols')
@@ -48,6 +49,22 @@ export default function ProtocolPanel({ aprs = {}, showToggle = false }) {
     setToggling(null);
   };
 
+  const handleDelete = async (id, name) => {
+    if (!confirm(`Xóa protocol "${name}" khỏi registry? Có thể restore lại bằng cách thêm lại adapter.`)) return;
+    setDeleting(id);
+    try {
+      const res = await fetch('/api/protocols', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      if (res.ok) {
+        setProtocols(prev => prev.filter(p => p.id !== id));
+      }
+    } catch { /* ignore */ }
+    setDeleting(null);
+  };
+
   const bestId = Object.entries(aprs).sort((a, b) => b[1] - a[1])[0]?.[0];
 
   return (
@@ -61,7 +78,7 @@ export default function ProtocolPanel({ aprs = {}, showToggle = false }) {
         <table style={styles.table}>
           <thead>
             <tr>
-              {['Protocol', 'Network', 'Phase', 'Live APR', 'Status', ...(showToggle ? ['Control'] : [])].map(h => (
+              {['Protocol', 'Network', 'Phase', 'Live APR', 'Status', ...(showToggle ? ['Control', ''] : [])].map(h => (
                 <th key={h} style={styles.th}>{h}</th>
               ))}
             </tr>
@@ -105,20 +122,36 @@ export default function ProtocolPanel({ aprs = {}, showToggle = false }) {
                     </span>
                   </td>
                   {showToggle && (
-                    <td style={styles.td}>
-                      <button
-                        onClick={() => handleToggle(p.id, p.enabled)}
-                        disabled={toggling === p.id}
-                        style={{
-                          ...styles.toggleBtn,
-                          background: p.enabled ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
-                          color: p.enabled ? '#ef4444' : '#10b981',
-                          borderColor: p.enabled ? 'rgba(239, 68, 68, 0.3)' : 'rgba(16, 185, 129, 0.3)',
-                          opacity: toggling === p.id ? 0.5 : 1,
-                        }}>
-                        {toggling === p.id ? '...' : p.enabled ? 'Disable' : 'Enable'}
-                      </button>
-                    </td>
+                    <>
+                      <td style={styles.td}>
+                        <button
+                          onClick={() => handleToggle(p.id, p.enabled)}
+                          disabled={toggling === p.id}
+                          style={{
+                            ...styles.toggleBtn,
+                            background: p.enabled ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                            color: p.enabled ? '#ef4444' : '#10b981',
+                            borderColor: p.enabled ? 'rgba(239, 68, 68, 0.3)' : 'rgba(16, 185, 129, 0.3)',
+                            opacity: toggling === p.id ? 0.5 : 1,
+                          }}>
+                          {toggling === p.id ? '...' : p.enabled ? 'Disable' : 'Enable'}
+                        </button>
+                      </td>
+                      <td style={styles.td}>
+                        <button
+                          onClick={() => handleDelete(p.id, p.name)}
+                          disabled={deleting === p.id}
+                          style={{
+                            ...styles.toggleBtn,
+                            background: 'rgba(239,68,68,0.08)',
+                            color: '#f87171',
+                            borderColor: 'rgba(239,68,68,0.25)',
+                            opacity: deleting === p.id ? 0.5 : 1,
+                          }}>
+                          {deleting === p.id ? '...' : 'Delete'}
+                        </button>
+                      </td>
+                    </>
                   )}
                 </tr>
               );

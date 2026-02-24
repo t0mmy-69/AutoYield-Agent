@@ -1,75 +1,12 @@
 [
   {
-    "aaveAPR": 4.2,
-    "compoundAPR": 3.6,
-    "delta": 0.6,
-    "timestamp": 1771836494161
-  },
-  {
-    "aaveAPR": 4.2,
-    "compoundAPR": 3.6,
-    "delta": 0.6,
-    "timestamp": 1771836494807
-  },
-  {
-    "aaveAPR": 4.2,
-    "compoundAPR": 3.6,
-    "delta": 0.6,
-    "timestamp": 1771836494817
-  },
-  {
-    "aaveAPR": 4.2,
-    "compoundAPR": 3.6,
-    "delta": 0.6,
-    "timestamp": 1771836549949
-  },
-  {
-    "aaveAPR": 4.2,
-    "compoundAPR": 3.6,
-    "delta": 0.6,
-    "timestamp": 1771836549960
-  },
-  {
-    "aaveAPR": 4.2,
-    "compoundAPR": 3.6,
-    "delta": 0.6,
-    "timestamp": 1771837363466
-  },
-  {
-    "aaveAPR": 4.2,
-    "compoundAPR": 3.6,
-    "delta": 0.6,
-    "timestamp": 1771837508905
-  },
-  {
-    "aaveAPR": 4.2,
-    "compoundAPR": 3.6,
-    "delta": 0.6,
-    "timestamp": 1771837508919
-  },
-  {
-    "aaveAPR": 4.2,
-    "compoundAPR": 3.6,
-    "delta": 0.6,
-    "timestamp": 1771847179054
-  },
-  {
-    "aaveAPR": 4.2,
-    "compoundAPR": 3.6,
-    "delta": 0.6,
-    "timestamp": 1771849534039
-  },
-  {
-    "aaveAPR": 4.2,
-    "compoundAPR": 3.6,
-    "delta": 0.6,
-    "timestamp": 1771849792799
-  },
-  {
-    "aaveAPR": 4.2,
-    "compoundAPR": 3.6,
-    "delta": 0.6,
-    "timestamp": 1771862035386
+    "aprs": {
+      "aave": 4.2,
+      "compound": 3.6
+    },
+    "best": "aave",
+    "bestAPR": 4.2,
+    "timestamp": 1771920230768
   },
   {
     "aprs": {
@@ -78,7 +15,7 @@
     },
     "best": "aave",
     "bestAPR": 4.2,
-    "timestamp": 1771896522232
+    "timestamp": 1771920465056
   },
   {
     "aprs": {
@@ -87,7 +24,7 @@
     },
     "best": "aave",
     "bestAPR": 4.2,
-    "timestamp": 1771896522255
+    "timestamp": 1771920510730
   },
   {
     "aprs": {
@@ -96,7 +33,7 @@
     },
     "best": "aave",
     "bestAPR": 4.2,
-    "timestamp": 1771896601809
+    "timestamp": 1771920732184
   },
   {
     "aprs": {
@@ -105,7 +42,7 @@
     },
     "best": "aave",
     "bestAPR": 4.2,
-    "timestamp": 1771896604536
+    "timestamp": 1771920737194
   },
   {
     "aprs": {
@@ -114,7 +51,7 @@
     },
     "best": "aave",
     "bestAPR": 4.2,
-    "timestamp": 1771898249271
+    "timestamp": 1771920737248
   },
   {
     "aprs": {
@@ -123,7 +60,7 @@
     },
     "best": "aave",
     "bestAPR": 4.2,
-    "timestamp": 1771898249294
+    "timestamp": 1771920762429
   },
   {
     "aprs": {
@@ -132,7 +69,7 @@
     },
     "best": "aave",
     "bestAPR": 4.2,
-    "timestamp": 1771901581620
+    "timestamp": 1771920798481
   },
   {
     "aprs": {
@@ -141,7 +78,7 @@
     },
     "best": "aave",
     "bestAPR": 4.2,
-    "timestamp": 1771901581627
+    "timestamp": 1771920880733
   },
   {
     "aprs": {
@@ -150,7 +87,7 @@
     },
     "best": "aave",
     "bestAPR": 4.2,
-    "timestamp": 1771901615746
+    "timestamp": 1771922860073
   },
   {
     "aprs": {
@@ -159,6 +96,123 @@
     },
     "best": "aave",
     "bestAPR": 4.2,
-    "timestamp": 1771901616859
+    "timestamp": 1771922863682
+  },
+  {
+    "aprs": {
+      "aave": 4.2,
+      "compound": 3.6
+    },
+    "best": "aave",
+    "bestAPR": 4.2,
+    "timestamp": 1771922893659
+  },
+  {
+    "aprs": {
+      "aave": 4.2,
+      "compound": 3.6
+    },
+    "best": "aave",
+    "bestAPR": 4.2,
+    "timestamp": 1771922936414
+  },
+  {
+    "aprs": {
+      "aave": 4.2,
+      "compound": 3.6
+    },
+    "best": "aave",
+    "bestAPR": 4.2,
+    "timestamp": 1771922939502
+  },
+  {
+    "aprs": {
+      "aave": 4.2,
+      "compound": 3.6
+    },
+    "best": "aave",
+    "bestAPR": 4.2,
+    "timestamp": 1771923201193
+  },
+  {
+    "aprs": {
+      "aave": 4.2,
+      "compound": 3.6
+    },
+    "best": "aave",
+    "bestAPR": 4.2,
+    "timestamp": 1771923206631
+  },
+  {
+    "aprs": {
+      "aave": 4.2,
+      "compound": 3.6
+    },
+    "best": "aave",
+    "bestAPR": 4.2,
+    "timestamp": 1771923674375
+  },
+  {
+    "aprs": {
+      "aave": 4.2,
+      "compound": 3.6
+    },
+    "best": "aave",
+    "bestAPR": 4.2,
+    "timestamp": 1771924526626
+  },
+  {
+    "aprs": {
+      "aave": 4.2,
+      "compound": 3.6
+    },
+    "best": "aave",
+    "bestAPR": 4.2,
+    "timestamp": 1771924537691
+  },
+  {
+    "aprs": {
+      "aave": 4.2,
+      "compound": 3.6
+    },
+    "best": "aave",
+    "bestAPR": 4.2,
+    "timestamp": 1771929341109
+  },
+  {
+    "aprs": {
+      "aave": 4.2,
+      "compound": 3.6
+    },
+    "best": "aave",
+    "bestAPR": 4.2,
+    "timestamp": 1771929621361
+  },
+  {
+    "aprs": {
+      "aave": 4.2,
+      "compound": 3.6
+    },
+    "best": "aave",
+    "bestAPR": 4.2,
+    "timestamp": 1771929633937
+  },
+  {
+    "aprs": {
+      "aave": 4.2,
+      "compound": 3.6
+    },
+    "best": "aave",
+    "bestAPR": 4.2,
+    "timestamp": 1771929633971
+  },
+  {
+    "aprs": {
+      "aave": 4.2,
+      "compound": 3.6
+    },
+    "best": "aave",
+    "bestAPR": 4.2,
+    "timestamp": 1771939644460
   }
 ]

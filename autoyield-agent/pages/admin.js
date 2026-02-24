@@ -76,6 +76,7 @@ export default function AdminDashboard() {
   const [credSaving, setCredSaving] = useState(null); // group id being saved
   const [chainToggling, setChainToggling] = useState(null);
   const [chainDeleting, setChainDeleting] = useState(null);
+  const [mounted, setMounted] = useState(false);
   const [agents, setAgents] = useState([]);
 
   const load = useCallback(async () => {
@@ -105,7 +106,10 @@ export default function AdminDashboard() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    setMounted(true);
+  }, [load]);
 
   const handleRefreshAPR = async () => {
     setRefreshing(true);
@@ -189,7 +193,7 @@ export default function AdminDashboard() {
           <span style={styles.adminBadge}>ADMIN</span>
         </div>
         <div style={{ color: '#94a3b8', fontSize: '0.9rem', fontWeight: 500 }}>
-          {new Date().toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
+          {mounted ? new Date().toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '—'}
         </div>
       </header>
 

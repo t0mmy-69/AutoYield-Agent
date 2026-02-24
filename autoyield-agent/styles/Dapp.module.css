@@ -2,12 +2,8 @@
     max-width: 1200px;
     margin: 0 auto;
     padding: 32px 24px;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    min-height: 100vh;
-    color: #f8fafc;
-    background-color: #0b0b14;
     position: relative;
-    overflow-x: hidden;
+    z-index: 10;
 }
 
 /* Background Effects */
@@ -46,48 +42,51 @@
     position: relative;
     z-index: 10;
     padding-bottom: 24px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid var(--border-glass);
 }
 
 .logoArea {
     display: flex;
     align-items: center;
-    gap: 12px;
-    font-size: 1.5rem;
-    font-weight: 700;
+    gap: 16px;
+    font-size: 1.75rem;
+    font-weight: 800;
     letter-spacing: -0.5px;
+    color: var(--text-main);
 }
 
 .logoIcon {
-    width: 36px;
-    height: 36px;
-    background: linear-gradient(135deg, #6366f1, #ec4899);
-    border-radius: 10px;
+    width: 42px;
+    height: 42px;
+    background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+    box-shadow: var(--shadow-glow-cyan);
+    animation: pulseGlow 4s infinite alternate;
 }
 
 .networkBadge {
-    background: rgba(148, 163, 184, 0.1);
-    border: 1px solid rgba(148, 163, 184, 0.2);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-glass);
     padding: 6px 14px;
     border-radius: 20px;
     font-size: 0.85rem;
-    font-weight: 500;
-    color: #94a3b8;
+    font-weight: 600;
+    color: var(--text-muted);
     display: flex;
     align-items: center;
     gap: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .pulseDot {
     width: 8px;
     height: 8px;
-    background-color: #ec4899;
+    background-color: var(--neon-emerald);
     border-radius: 50%;
-    box-shadow: 0 0 10px #ec4899;
+    box-shadow: var(--shadow-glow-emerald);
     animation: pulse 2s infinite;
 }
 
@@ -147,38 +146,65 @@
     gap: 24px;
 }
 
-/* Standardized Glass Card */
+/* Standardized Supreme Glass Card */
 .glassCard {
-    background: rgba(30, 41, 59, 0.4);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 16px;
-    padding: 24px;
-    backdrop-filter: blur(12px);
-    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
-    transition: border-color 0.3s ease, transform 0.3s ease;
+    background: var(--bg-card);
+    border: 1px solid var(--border-glass);
+    border-radius: 20px;
+    padding: 28px;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.7);
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.glassCard::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 20px;
+    padding: 1px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    transition: background 0.4s ease;
 }
 
 .glassCard:hover {
-    border-color: rgba(99, 102, 241, 0.3);
+    background: var(--bg-card-hover);
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.8), inset 0 0 40px rgba(0, 240, 255, 0.02);
+}
+
+.glassCard:hover::before {
+    background: linear-gradient(135deg, rgba(0, 240, 255, 0.5), rgba(255, 0, 127, 0.2));
 }
 
 .cardHeader {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--border-glass);
     padding-bottom: 16px;
 }
 
 .cardTitle {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #f8fafc;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-main);
     margin: 0;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
+    letter-spacing: 0.5px;
 }
 
 /* Quick Stats Row (Optional injection if needed globally) */

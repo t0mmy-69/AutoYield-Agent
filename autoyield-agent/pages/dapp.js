@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
+import dappStyles from '../styles/Dapp.module.css';
 import AgentWalletPanel from '../components/AgentWalletPanel';
 import APRPanel from '../components/APRPanel';
 import DecisionPanel from '../components/DecisionPanel';
@@ -89,7 +90,6 @@ export default function Dashboard() {
       const me = await res.json();
       setUser({ address: me.address, agentWallet: me.agentWallet, usdcBalance: me.usdcBalance });
     } else {
-      // Token expired
       clearToken();
       setToken(null);
       setAuthStep('idle');
@@ -119,7 +119,6 @@ export default function Dashboard() {
       const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
       const address = accounts[0];
 
-      // 1. Get challenge
       setAuthStep('signing');
       const chalRes = await fetch('/api/auth/challenge', {
         method: 'POST',
@@ -129,13 +128,11 @@ export default function Dashboard() {
       if (!chalRes.ok) throw new Error('Failed to get challenge');
       const { message } = await chalRes.json();
 
-      // 2. Sign message
       const signature = await window.ethereum.request({
         method: 'personal_sign',
         params: [message, address],
       });
 
-      // 3. Verify + get session token
       const verRes = await fetch('/api/auth/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -149,7 +146,6 @@ export default function Dashboard() {
       setUser({ address: verData.user.address, agentWallet: verData.agentWallet });
       setAuthStep('done');
 
-      // Refresh data with new token
       await Promise.all([
         fetchState(verData.token),
         fetchRules(verData.token),
@@ -172,8 +168,6 @@ export default function Dashboard() {
     setDecision(null);
     setAuthStep('idle');
   };
-
-  // ── Agent actions ─────────────────────────────────────────────────────────
 
   const handleRunCheck = async () => {
     setLoading(true);
@@ -234,25 +228,35 @@ export default function Dashboard() {
     confidenceThreshold: rules?.confidenceThreshold,
   } : null;
 
-  // ── Render: not connected ─────────────────────────────────────────────────
-
   if (authStep !== 'done') {
     return (
-      <div style={styles.page}>
-        <div style={styles.header}>
-          <h1 style={styles.logo}>AutoYield Agent</h1>
-          <Link href="/admin" style={styles.adminLink}>Admin</Link>
-        </div>
-        <div style={styles.connectCard}>
-          <div style={styles.connectIcon}>⚡</div>
-          <h2 style={styles.connectTitle}>Connect Your Wallet</h2>
-          <p style={styles.connectDesc}>
-            Sign in with any EVM wallet to access your personal yield agent.
+      <div className={dappStyles.page}>
+        <header className={dappStyles.header}>
+          <div className={dappStyles.logoArea}>
+            <div className={dappStyles.logoIcon}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+            </div>
+            AutoYield Agent
+          </div>
+          <Link href="/admin" className={dappStyles.networkBadge} style={{ textDecoration: 'none' }}>Admin</Link>
+        </header>
+
+        <div className={dappStyles.glassCard} style={{ maxWidth: 480, margin: '80px auto', textAlign: 'center' }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>⚡</div>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: '0 0 12px', color: 'var(--text-main)' }}>Connect Your Wallet</h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', lineHeight: 1.6, marginBottom: 24 }}>
+            Sign in with any EVM wallet to access your personal elite yield agent.
             Deposits supported on Ethereum Sepolia, Base Sepolia, and Arbitrum Sepolia.
           </p>
-          {error && <div style={styles.error}>{error}</div>}
+          {error && <div className={dappStyles.error}>{error}</div>}
           <button
-            style={{ ...styles.connectBtn, opacity: authStep !== 'idle' ? 0.6 : 1 }}
+            style={{
+              background: 'linear-gradient(135deg, var(--neon-cyan), var(--neon-purple))',
+              color: '#fff', border: 'none', padding: '14px 32px', borderRadius: 12,
+              fontSize: '1.05rem', fontWeight: 800, cursor: 'pointer', width: '100%',
+              boxShadow: 'var(--shadow-glow-cyan)', transition: 'all 0.3s ease',
+              opacity: authStep !== 'idle' ? 0.6 : 1
+            }}
             onClick={handleConnect}
             disabled={authStep !== 'idle'}
           >
@@ -260,7 +264,7 @@ export default function Dashboard() {
             {authStep === 'signing' && '✍️ Sign message in MetaMask...'}
             {authStep === 'idle' && '🦊 Connect with MetaMask'}
           </button>
-          <p style={styles.custodyNote}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: 20, lineHeight: 1.5 }}>
             ⚠️ Custody model: your agent wallet keys are managed server-side.
             Only deposit funds you are comfortable delegating to this automated agent.
           </p>
@@ -269,33 +273,39 @@ export default function Dashboard() {
     );
   }
 
-  // ── Render: connected ─────────────────────────────────────────────────────
-
   return (
-    <div style={styles.page}>
-      <div style={styles.header}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <h1 style={styles.logo}>AutoYield Agent</h1>
-          <span style={styles.network}>Testnet · ETH · Base · Arbitrum</span>
+    <div className={dappStyles.page}>
+      <header className={dappStyles.header}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div className={dappStyles.logoArea}>
+            <div className={dappStyles.logoIcon}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+            </div>
+            AutoYield Agent
+          </div>
+          <span className={dappStyles.networkBadge}>
+            <div className={dappStyles.pulseDot} />
+            Testnet · ETH · Base · ARB
+          </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           {user && (
-            <span style={styles.addressBadge}>
+            <span style={{ background: 'rgba(0, 240, 255, 0.1)', border: '1px solid rgba(0, 240, 255, 0.3)', padding: '6px 14px', borderRadius: 8, fontSize: '0.85rem', color: 'var(--neon-cyan)', fontFamily: 'monospace', fontWeight: 600 }}>
               {user.address.slice(0, 6)}…{user.address.slice(-4)}
             </span>
           )}
-          <button onClick={handleDisconnect} style={styles.disconnectBtn}>Disconnect</button>
-          <Link href="/admin" style={styles.adminLink}>Admin</Link>
+          <button onClick={handleDisconnect} style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border-glass)', padding: '6px 14px', borderRadius: 8, fontSize: '0.85rem', cursor: 'pointer', fontWeight: 600 }}>Disconnect</button>
+          <Link href="/admin" className={dappStyles.networkBadge} style={{ textDecoration: 'none', background: 'rgba(176, 38, 255, 0.15)', color: 'var(--neon-purple)', borderColor: 'rgba(176, 38, 255, 0.3)' }}>Admin View</Link>
         </div>
-      </div>
+      </header>
 
-      {error && <div style={styles.error}>{error}</div>}
+      {error && <div className={dappStyles.error}>{error}</div>}
 
       {user?.agentWallet && (
-        <div style={styles.depositBanner}>
-          <span style={{ color: '#888', fontSize: 13 }}>Your agent wallet:</span>
-          <code style={styles.depositAddress}>{user.agentWallet}</code>
-          <span style={{ color: '#4ade80', fontSize: 12 }}>← Deposit USDC here (Sepolia · Base Sepolia · Arbitrum Sepolia)</span>
+        <div className={dappStyles.glassCard} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 24px', marginBottom: 24, paddingBottom: '16px', background: 'rgba(0, 255, 157, 0.05)', borderColor: 'rgba(0, 255, 157, 0.2)' }}>
+          <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 600 }}>AGENT WALLET:</span>
+          <code style={{ background: 'rgba(0, 0, 0, 0.3)', padding: '4px 10px', borderRadius: 6, fontSize: '0.85rem', color: 'var(--neon-emerald)', fontFamily: 'monospace', letterSpacing: '0.05em' }}>{user.agentWallet}</code>
+          <span style={{ color: 'var(--neon-emerald)', fontSize: '0.85rem', fontWeight: 600 }}>← Deposit USDC here to start yielding</span>
         </div>
       )}
 
@@ -314,7 +324,7 @@ export default function Dashboard() {
         onReject={handleReject}
       />
 
-      <div style={styles.twoCol}>
+      <div className={dappStyles.mainGrid}>
         <APRPanel aprData={enrichedAprData} />
         <DecisionPanel
           decision={decision}
@@ -330,23 +340,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
-const styles = {
-  page: { maxWidth: 1040, margin: '0 auto', padding: '24px 16px', fontFamily: 'system-ui, -apple-system, sans-serif', background: '#0f0f1e', minHeight: '100vh', color: '#eee' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
-  logo: { margin: 0, fontSize: 24, fontWeight: 800, color: '#fff' },
-  network: { background: '#1a1a2e', border: '1px solid #2a2a4a', padding: '4px 12px', borderRadius: 6, fontSize: 13, color: '#888' },
-  adminLink: { background: '#4f46e520', color: '#4f46e5', border: '1px solid #4f46e540', padding: '6px 16px', borderRadius: 8, fontSize: 13, fontWeight: 700, textDecoration: 'none' },
-  twoCol: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 },
-  error: { background: '#2a1010', border: '1px solid #ff4444', borderRadius: 8, padding: '10px 16px', color: '#ff4444', marginBottom: 16, fontSize: 14 },
-  addressBadge: { background: '#1a1a2e', border: '1px solid #2a2a4a', padding: '5px 12px', borderRadius: 6, fontSize: 13, color: '#a78bfa', fontFamily: 'monospace' },
-  disconnectBtn: { background: 'transparent', color: '#888', border: '1px solid #333', padding: '5px 12px', borderRadius: 6, fontSize: 12, cursor: 'pointer' },
-  depositBanner: { display: 'flex', alignItems: 'center', gap: 12, background: '#0d1f0d', border: '1px solid #1a3a1a', borderRadius: 8, padding: '10px 16px', marginBottom: 16, flexWrap: 'wrap' },
-  depositAddress: { background: '#0f2f0f', padding: '3px 8px', borderRadius: 4, fontSize: 12, color: '#4ade80', fontFamily: 'monospace', letterSpacing: '0.03em' },
-  connectCard: { maxWidth: 480, margin: '80px auto', background: '#14142b', border: '1px solid #2a2a4a', borderRadius: 16, padding: '40px 32px', textAlign: 'center' },
-  connectIcon: { fontSize: 48, marginBottom: 16 },
-  connectTitle: { margin: '0 0 12px', fontSize: 24, fontWeight: 700, color: '#fff' },
-  connectDesc: { color: '#888', fontSize: 15, lineHeight: 1.6, marginBottom: 24 },
-  connectBtn: { background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: '#fff', border: 'none', padding: '14px 32px', borderRadius: 10, fontSize: 16, fontWeight: 700, cursor: 'pointer', width: '100%', transition: 'opacity 0.2s' },
-  custodyNote: { color: '#555', fontSize: 12, marginTop: 20, lineHeight: 1.5 },
-};

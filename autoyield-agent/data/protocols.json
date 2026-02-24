@@ -1,5 +1,8 @@
 {
   "aave": {
     "enabled": true
+  },
+  "compound": {
+    "enabled": true
   }
 }

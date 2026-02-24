@@ -2,7 +2,8 @@ import dappStyles from '../styles/Dapp.module.css';
 
 export default function DecisionPanel({ decision, onRunCheck, loading }) {
   const isRotate = decision?.action === 'ROTATE';
-  const badgeColor = isRotate ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #475569, #334155)';
+  const badgeColor = isRotate ? 'linear-gradient(135deg, var(--neon-emerald), var(--neon-cyan))' : 'linear-gradient(135deg, #475569, #334155)';
+  const glowShadow = isRotate ? 'var(--shadow-glow-emerald)' : 'none';
 
   return (
     <div className={dappStyles.glassCard}>
@@ -10,7 +11,7 @@ export default function DecisionPanel({ decision, onRunCheck, loading }) {
         <h2 className={dappStyles.cardTitle}>Decision Engine Output</h2>
       </div>
 
-      <div style={{ ...styles.badge, background: badgeColor }}>
+      <div style={{ ...styles.badge, background: badgeColor, boxShadow: glowShadow }}>
         {decision?.action ?? 'NOT RUN'}
       </div>
 
@@ -30,19 +31,19 @@ export default function DecisionPanel({ decision, onRunCheck, loading }) {
           </div>
           <div style={styles.row}>
             <span style={styles.label}>Projected Annual Gain</span>
-            <span style={{ ...styles.value, color: '#10b981' }}>
+            <span style={{ ...styles.value, color: 'var(--neon-emerald)', textShadow: '0 0 8px rgba(0,255,157,0.4)' }}>
               +${decision.projectedAnnualGain?.toFixed(2) ?? '—'}
             </span>
           </div>
           <div style={styles.row}>
             <span style={styles.label}>Expected Annual Gas</span>
-            <span style={{ ...styles.value, color: '#f59e0b' }}>
+            <span style={{ ...styles.value, color: 'var(--neon-pink)' }}>
               -${decision.expectedAnnualGasCost?.toFixed(2) ?? '—'}
             </span>
           </div>
-          <div style={{ ...styles.row, borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 12, marginTop: 8 }}>
-            <span style={{ ...styles.label, fontWeight: 800, color: '#f8fafc' }}>Net Annual Gain</span>
-            <span style={{ fontWeight: 800, fontSize: '1.1rem', color: decision.netAnnualGain >= 0 ? '#10b981' : '#ef4444' }}>
+          <div style={{ ...styles.row, borderTop: '1px solid var(--border-glass)', paddingTop: 16, marginTop: 12 }}>
+            <span style={{ ...styles.label, fontWeight: 900, color: 'var(--text-main)', letterSpacing: 1 }}>Net Annual Gain</span>
+            <span style={{ fontWeight: 900, fontSize: '1.25rem', color: decision.netAnnualGain >= 0 ? 'var(--neon-emerald)' : 'var(--neon-pink)', textShadow: decision.netAnnualGain >= 0 ? '0 0 10px rgba(0,255,157,0.5)' : 'none' }}>
               {decision.netAnnualGain >= 0 ? '+' : ''}${decision.netAnnualGain?.toFixed(2) ?? '—'}
             </span>
           </div>
@@ -57,11 +58,11 @@ export default function DecisionPanel({ decision, onRunCheck, loading }) {
 }
 
 const styles = {
-  badge: { display: 'inline-flex', padding: '8px 24px', borderRadius: 12, fontWeight: 800, fontSize: '1.2rem', color: '#fff', marginBottom: 16, boxShadow: '0 4px 15px rgba(0,0,0,0.3)' },
-  reason: { color: '#94a3b8', fontSize: '0.9rem', lineHeight: 1.6, margin: '0 0 16px' },
-  divider: { height: 1, background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)', margin: '16px 0' },
-  row: { display: 'flex', justifyContent: 'space-between', marginBottom: 12, fontSize: '0.95rem' },
-  label: { color: '#94a3b8' },
-  value: { color: '#f8fafc', fontWeight: 600 },
-  btn: { marginTop: 24, width: '100%', padding: '14px 0', background: 'linear-gradient(135deg, #6366f1, #4f46e5)', color: '#fff', border: 'none', borderRadius: 12, fontWeight: 700, fontSize: '1rem', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 15px rgba(99, 102, 241, 0.4)' },
+  badge: { display: 'inline-flex', padding: '8px 24px', borderRadius: 12, fontWeight: 900, fontSize: '1.2rem', color: '#fff', marginBottom: 16, letterSpacing: 1.5 },
+  reason: { color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.6, margin: '0 0 16px' },
+  divider: { height: 1, background: 'linear-gradient(90deg, transparent, var(--border-glass), transparent)', margin: '16px 0' },
+  row: { display: 'flex', justifyContent: 'space-between', marginBottom: 14, fontSize: '0.95rem' },
+  label: { color: 'var(--text-muted)' },
+  value: { color: 'var(--text-main)', fontWeight: 800 },
+  btn: { marginTop: 24, width: '100%', padding: '16px 0', background: 'linear-gradient(135deg, var(--neon-purple), var(--neon-cyan))', color: '#fff', border: 'none', borderRadius: 12, fontWeight: 800, fontSize: '1.05rem', cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)', boxShadow: 'var(--shadow-glow-cyan)', letterSpacing: 1, textTransform: 'uppercase' },
 };

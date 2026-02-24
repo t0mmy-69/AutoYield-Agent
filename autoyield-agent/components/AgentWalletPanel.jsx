@@ -119,10 +119,10 @@ export default function AgentWalletPanel({ agentAddress, usdcBalance, currentPro
       <div className={dappStyles.cardHeader}>
         <h2 className={dappStyles.cardTitle}>Agent Wallet</h2>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={() => { setShowDeposit(v => !v); setShowWithdraw(false); }} style={styles.actionBtn('#10b981')}>
+          <button onClick={() => { setShowDeposit(v => !v); setShowWithdraw(false); }} style={styles.actionBtn('var(--neon-emerald)', 'rgba(0,255,157,0.3)')}>
             ↓ Deposit
           </button>
-          <button onClick={() => { setShowWithdraw(v => !v); setShowDeposit(false); }} style={styles.actionBtn('#6366f1')}>
+          <button onClick={() => { setShowWithdraw(v => !v); setShowDeposit(false); }} style={styles.actionBtn('var(--neon-cyan)', 'rgba(0,240,255,0.3)')}>
             ↑ Withdraw
           </button>
         </div>
@@ -140,7 +140,7 @@ export default function AgentWalletPanel({ agentAddress, usdcBalance, currentPro
 
       <div style={styles.row}>
         <span style={styles.label}>USDC Balance</span>
-        <span style={{ ...styles.value, fontWeight: 700, fontSize: 24, color: '#00d395' }}>
+        <span style={{ ...styles.value, fontWeight: 800, fontSize: 26, color: 'var(--neon-emerald)', textShadow: '0 0 10px rgba(0,255,157,0.4)' }}>
           ${usdcBalance?.toFixed(2) ?? '—'}
         </span>
       </div>
@@ -183,7 +183,7 @@ export default function AgentWalletPanel({ agentAddress, usdcBalance, currentPro
       {showWithdraw && (
         <div style={styles.subPanel}>
           <p style={styles.subTitle}>Withdraw USDC to Your Wallet</p>
-          <p style={styles.subHint}>Agent wallet sẽ gửi USDC về ví chính của bạn ({userAddress ? `${userAddress.slice(0,6)}...${userAddress.slice(-4)}` : '—'}).</p>
+          <p style={styles.subHint}>Agent wallet sẽ gửi USDC về ví chính của bạn ({userAddress ? `${userAddress.slice(0, 6)}...${userAddress.slice(-4)}` : '—'}).</p>
           <div style={styles.inputRow}>
             <input
               type="number"
@@ -211,15 +211,15 @@ export default function AgentWalletPanel({ agentAddress, usdcBalance, currentPro
 
 const styles = {
   row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  label: { color: '#94a3b8', fontSize: '0.9rem' },
-  value: { color: '#f8fafc', fontSize: '0.95rem', display: 'flex', alignItems: 'center' },
-  badge: { color: '#fff', padding: '4px 12px', borderRadius: 8, fontWeight: 700, fontSize: '0.85rem', letterSpacing: '0.5px' },
-  copyBtn: { marginLeft: 8, background: 'rgba(255,255,255,0.1)', border: 'none', color: '#f8fafc', cursor: 'pointer', fontSize: 12, borderRadius: 4, padding: '2px 6px', transition: 'background 0.2s' },
-  actionBtn: (color) => ({ background: `${color}20`, color, border: `1px solid ${color}50`, borderRadius: 8, padding: '5px 14px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }),
-  subPanel: { marginTop: 16, borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 16 },
-  subTitle: { margin: '0 0 4px', fontSize: '0.9rem', fontWeight: 700, color: '#f8fafc' },
-  subHint: { margin: '0 0 12px', fontSize: '0.8rem', color: '#64748b' },
+  label: { color: 'var(--text-muted)', fontSize: '0.9rem' },
+  value: { color: 'var(--text-main)', fontSize: '0.95rem', display: 'flex', alignItems: 'center' },
+  badge: { color: '#fff', padding: '4px 12px', borderRadius: 8, fontWeight: 800, fontSize: '0.85rem', letterSpacing: '0.5px', boxShadow: '0 0 10px rgba(255,255,255,0.2)' },
+  copyBtn: { marginLeft: 8, background: 'var(--border-glass)', border: 'none', color: 'var(--text-main)', cursor: 'pointer', fontSize: 12, borderRadius: 4, padding: '2px 6px', transition: 'background 0.2s', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1)' },
+  actionBtn: (color, glow) => ({ background: `rgba(255,255,255,0.05)`, color, border: `1px solid ${color}`, borderRadius: 8, padding: '5px 14px', fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer', boxShadow: `0 0 10px ${glow}`, textShadow: `0 0 5px ${color}` }),
+  subPanel: { marginTop: 16, borderTop: '1px solid var(--border-glass)', paddingTop: 16 },
+  subTitle: { margin: '0 0 4px', fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-main)' },
+  subHint: { margin: '0 0 12px', fontSize: '0.85rem', color: 'var(--text-muted)' },
   inputRow: { display: 'flex', gap: 8 },
-  amountInput: { flex: 1, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '9px 12px', color: '#f8fafc', fontSize: '0.9rem', outline: 'none' },
-  confirmBtn: { color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' },
+  amountInput: { flex: 1, background: 'rgba(0,0,0,0.5)', border: '1px solid var(--border-glass)', borderRadius: 12, padding: '10px 16px', color: 'var(--text-main)', fontSize: '0.95rem', outline: 'none', transition: 'border 0.3s', '&:focus': { borderColor: 'var(--neon-cyan)' } },
+  confirmBtn: { color: '#fff', border: 'none', borderRadius: 12, padding: '10px 20px', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer', boxShadow: '0 4px 15px rgba(0,0,0,0.4)', textTransform: 'uppercase', letterSpacing: 0.5 },
 };

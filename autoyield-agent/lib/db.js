@@ -79,6 +79,11 @@ export function getDb() {
       user_id    INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
       locked_at  INTEGER NOT NULL DEFAULT 0
     );
+
+    CREATE TABLE IF NOT EXISTS telegram_callbacks (
+      callback_id  TEXT    PRIMARY KEY,
+      processed_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
+    );
   `);
 
   return _db;
@@ -234,4 +239,18 @@ export function acquireSchedulerLock(userId, ttlMs = 4 * 60 * 1000) {
 
 export function releaseSchedulerLock(userId) {
   getDb().prepare('DELETE FROM scheduler_lock WHERE user_id = ?').run(userId);
+}
+
+// ─── Telegram Callback Dedup ───────────────────────────────────────────────────
+
+/** Returns true if this Telegram callback_query_id was already processed. */
+export function isTelegramCallbackProcessed(callbackId) {
+  return !!getDb().prepare('SELECT 1 FROM telegram_callbacks WHERE callback_id = ?').get(callbackId);
+}
+
+/** Mark a Telegram callback_query_id as processed (idempotent). */
+export function markTelegramCallbackProcessed(callbackId) {
+  getDb().prepare(
+    'INSERT OR IGNORE INTO telegram_callbacks (callback_id) VALUES (?)'
+  ).run(String(callbackId));
 }

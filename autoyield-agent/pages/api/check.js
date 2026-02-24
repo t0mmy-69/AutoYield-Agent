@@ -5,6 +5,7 @@ import { estimateGasCostUsd } from '../../lib/gasEstimator.js';
 import { getSigner, getUsdcBalance } from '../../lib/agentWallet.js';
 import { getUserSigner, getUserUsdcBalance } from '../../lib/userWallet.js';
 import { getSessionFromRequest } from '../../lib/auth.js';
+import { getAgentWallet } from '../../lib/db.js';
 import { readStateForUser, writeStateForUser } from './state.js';
 import { readRulesForUser } from './rules.js';
 import { sendApprovalMessage } from '../../lib/telegramBot.js';
@@ -48,6 +49,7 @@ export default async function handler(req, res) {
       if (rules.executionMode === 'auto') {
         const { executeApproval } = await import('./approve.js');
         await executeApproval(decisionWithExpiry, state, usdcBalance, signer, userId);
+        // chainId resolved inside executeApproval via getAgentWallet(userId)
       }
     }
 

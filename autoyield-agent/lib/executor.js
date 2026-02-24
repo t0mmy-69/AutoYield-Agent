@@ -1,5 +1,7 @@
 import { ethers } from 'ethers';
 import { getProtocol } from './protocols/index.js';
+import { CHAINS } from './chains/configs.js';
+import { getCredential } from './credentials.js';
 
 const ERC20_ABI = [
   'function decimals() view returns (uint8)',
@@ -10,8 +12,11 @@ const ERC20_ABI = [
  * Execute a rotation: withdraw from `from` protocol, supply to `to` protocol.
  * Uses the protocol adapter registry — supports any registered protocol.
  * Adding a new protocol only requires registering a new adapter.
+ *
+ * @param {string} chainId - Agent wallet chain (e.g. 'sepolia', 'baseSepolia').
+ *   Used to resolve the correct chain-specific USDC contract address.
  */
-export async function executeRotation({ from, to, signer }) {
+export async function executeRotation({ from, to, signer, chainId = 'sepolia' }) {
   const fromAdapter = getProtocol(from);
   const toAdapter = getProtocol(to);
 
@@ -19,7 +24,13 @@ export async function executeRotation({ from, to, signer }) {
   if (!toAdapter) throw new Error(`Unknown target protocol: "${to}"`);
 
   const agentAddress = await signer.getAddress();
-  const usdcAddress = process.env.USDC_ADDRESS;
+
+  // Resolve chain-specific USDC address — falls back to global env for legacy/single-chain mode
+  const chain = CHAINS[chainId];
+  const usdcAddress = (chain ? getCredential(chain.usdcEnvVar) : null)
+    || getCredential('USDC_ADDRESS')
+    || process.env.USDC_ADDRESS;
+  if (!usdcAddress) throw new Error(`USDC address not configured for chain: ${chainId}`);
   const usdc = new ethers.Contract(usdcAddress, ERC20_ABI, signer);
   const decimals = await usdc.decimals();
 

@@ -5,6 +5,7 @@ import { readStateForUser, writeStateForUser } from '../state.js';
 import { appendHistoryForUser } from '../history.js';
 import { getSigner, getUsdcBalance } from '../../../lib/agentWallet.js';
 import { getUserSigner, getUserUsdcBalance } from '../../../lib/userWallet.js';
+import { isTelegramCallbackProcessed, markTelegramCallbackProcessed } from '../../../lib/db.js';
 import { executeApproval } from '../approve.js';
 
 const CONFIG_PATH = path.join(process.cwd(), 'data', 'telegram.json');
@@ -34,6 +35,12 @@ export default async function handler(req, res) {
   if (!callbackQuery) return res.status(200).json({ ok: true });
 
   const { id: callbackQueryId, data: callbackData, from: fromUser } = callbackQuery;
+
+  // ── Replay prevention — reject already-processed callback IDs ─────────────
+  if (isTelegramCallbackProcessed(callbackQueryId)) {
+    await answerCallbackQuery(callbackQueryId, 'Already processed.');
+    return res.status(200).json({ ok: true });
+  }
 
   // ── ChatId verification — only configured owner can approve ───────────────
   const authorizedChatId = getTelegramChatId();
@@ -87,6 +94,9 @@ export default async function handler(req, res) {
 
   const isApprove = callbackData === `approve_${expectedId}`;
   const isReject = callbackData === `reject_${expectedId}`;
+
+  // Mark as processed BEFORE execution to prevent double-execution on Telegram retry
+  markTelegramCallbackProcessed(callbackQueryId);
 
   if (isApprove) {
     try {

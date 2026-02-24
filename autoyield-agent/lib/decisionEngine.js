@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import {
   getDeltaHistory,
   computeEmaDelta,
@@ -5,6 +6,11 @@ import {
   computeStdDev,
   computePersistence,
 } from './aprHistory.js';
+
+/** Generate a cryptographically random, unpredictable decision ID. */
+function randomDecisionId() {
+  return `decision_${crypto.randomBytes(8).toString('hex')}`;
+}
 
 /**
  * Main decision engine — 6 steps as defined in spec.
@@ -97,7 +103,7 @@ export function runDecisionEngine({ state, aprSnapshot, history, rules, gasCostU
     allAPRs: aprs,
     reason: `Delta +${deltaPct}% (EMA ${emaDelta}%) stable for ${persistence} checks. Confidence ${confidenceScore.toFixed(2)} >= threshold ${rules.confidenceThreshold}. Annual net gain $${(projectedAnnualGain - expectedAnnualGasCost).toFixed(2)}.`,
     timestamp: Date.now(),
-    id: `decision_${Date.now()}`,
+    id: randomDecisionId(),
   };
 }
 
@@ -125,6 +131,6 @@ function noop(context) {
     allAPRs: aprSnapshot?.aprs || {},
     reason,
     timestamp: Date.now(),
-    id: `decision_${Date.now()}`,
+    id: randomDecisionId(),
   };
 }

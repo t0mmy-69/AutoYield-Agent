@@ -1,5 +1,5 @@
 # AutoYield Agent DApp
-Retail DeFi Auto-Pilot with Capital-Aware Decision Engine — v3.2
+Retail DeFi Auto-Pilot with Capital-Aware Decision Engine — v3.3
 
 AutoYield Agent is a browser-based DApp that creates a **dedicated Agent Wallet per user** and optimizes USDC yield across **N lending protocols on multiple chains** in a rational, gas-aware, and transparent way.
 

@@ -10,11 +10,28 @@ import { readStateForUser, writeStateForUser } from './state.js';
 import { readRulesForUser } from './rules.js';
 import { sendApprovalMessage } from '../../lib/telegramBot.js';
 
+// Simple in-memory rate limiter: 1 manual check per user/IP per 60 seconds
+const rateLimitMap = new Map(); // key → lastCalledMs
+const RATE_LIMIT_MS = 60 * 1000;
+
+function isRateLimited(key) {
+  const last = rateLimitMap.get(key);
+  if (last && Date.now() - last < RATE_LIMIT_MS) return true;
+  rateLimitMap.set(key, Date.now());
+  return false;
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
   try {
     const session = getSessionFromRequest(req);
     const userId = session?.userId ?? null;
+
+    // Rate limit by userId (authenticated) or IP (unauthenticated)
+    const rlKey = userId != null ? `user:${userId}` : `ip:${req.headers['x-forwarded-for'] || req.socket.remoteAddress}`;
+    if (isRateLimited(rlKey)) {
+      return res.status(429).json({ error: 'Too many requests. Please wait 60 seconds between manual checks.' });
+    }
 
     // Get signer + balance (per-user or global)
     let signer, usdcBalance, agentAddress;

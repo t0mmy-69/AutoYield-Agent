@@ -63,6 +63,21 @@ const PROTOCOL_CRED_GROUPS = [
   },
 ];
 
+const ADMIN_SECRET_KEY = '__autoyield_admin_secret__';
+
+function getAdminSecret() {
+  try { return sessionStorage.getItem(ADMIN_SECRET_KEY) || ''; } catch { return ''; }
+}
+function setAdminSecret(s) {
+  try { sessionStorage.setItem(ADMIN_SECRET_KEY, s); } catch {}
+}
+
+function adminFetch(url, options = {}) {
+  const secret = getAdminSecret();
+  const headers = { ...(options.headers || {}), 'x-admin-secret': secret };
+  return fetch(url, { ...options, headers });
+}
+
 export default function AdminDashboard() {
   const [state, setState] = useState(null);
   const [aprData, setAprData] = useState(null);
@@ -78,6 +93,8 @@ export default function AdminDashboard() {
   const [chainDeleting, setChainDeleting] = useState(null);
   const [mounted, setMounted] = useState(false);
   const [agents, setAgents] = useState([]);
+  const [adminSecret, setAdminSecretState] = useState('');
+  const [secretPrompt, setSecretPrompt] = useState(false);
 
   const load = useCallback(async () => {
     const [stateRes, rulesRes, historyRes, chainsRes, credRes, agentsRes] = await Promise.all([
@@ -86,13 +103,14 @@ export default function AdminDashboard() {
       fetch('/api/history'),
       fetch('/api/chains'),
       fetch('/api/credentials'),
-      fetch('/api/admin/agents'),
+      adminFetch('/api/admin/agents'),
     ]);
     if (stateRes.ok) setState(await stateRes.json());
     if (rulesRes.ok) setRules(await rulesRes.json());
     if (historyRes.ok) setHistory(await historyRes.json());
     if (chainsRes.ok) setChains(await chainsRes.json());
     if (agentsRes.ok) setAgents(await agentsRes.json());
+    if (!agentsRes.ok && agentsRes.status === 401) setSecretPrompt(true);
     if (credRes.ok) {
       const list = await credRes.json();
       const map = {};
@@ -107,9 +125,17 @@ export default function AdminDashboard() {
   }, []);
 
   useEffect(() => {
+    setAdminSecretState(getAdminSecret());
     load();
     setMounted(true);
   }, [load]);
+
+  const handleSecretSubmit = (e) => {
+    e.preventDefault();
+    setAdminSecret(adminSecret);
+    setSecretPrompt(false);
+    load();
+  };
 
   const handleRefreshAPR = async () => {
     setRefreshing(true);
@@ -122,7 +148,7 @@ export default function AdminDashboard() {
     setCredSaving(groupId);
     const updates = {};
     keys.forEach(k => { updates[k] = credEdits[k] ?? ''; });
-    const res = await fetch('/api/credentials', {
+    const res = await adminFetch('/api/credentials', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates),
@@ -153,7 +179,7 @@ export default function AdminDashboard() {
   const handleChainToggle = async (id, currentEnabled) => {
     setChainToggling(id);
     try {
-      const res = await fetch('/api/chains', {
+      const res = await adminFetch('/api/chains', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, enabled: !currentEnabled }),
@@ -164,10 +190,10 @@ export default function AdminDashboard() {
   };
 
   const handleChainDelete = async (id, name) => {
-    if (!confirm(`Xóa chain "${name}" khỏi danh sách? Có thể restore lại bằng cách xóa data/chains.json.`)) return;
+    if (!confirm(`Remove chain "${name}" from the list? You can restore it by deleting data/chains.json.`)) return;
     setChainDeleting(id);
     try {
-      const res = await fetch('/api/chains', {
+      const res = await adminFetch('/api/chains', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id }),
@@ -185,6 +211,26 @@ export default function AdminDashboard() {
 
   return (
     <div className={dappStyles.page}>
+      {/* Admin secret prompt */}
+      {secretPrompt && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <form onSubmit={handleSecretSubmit} style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: '40px', width: 360, display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#f8fafc' }}>Admin Access Required</div>
+            <div style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Enter the <code style={{ color: '#818cf8' }}>ADMIN_SECRET</code> configured on this server.</div>
+            <input
+              type="password"
+              value={adminSecret}
+              onChange={e => setAdminSecretState(e.target.value)}
+              placeholder="Admin secret..."
+              autoFocus
+              style={{ background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, padding: '10px 14px', color: '#f8fafc', fontSize: '0.95rem', outline: 'none' }}
+            />
+            <button type="submit" style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)', color: '#fff', border: 'none', borderRadius: 8, padding: '10px', fontWeight: 700, cursor: 'pointer' }}>
+              Unlock
+            </button>
+          </form>
+        </div>
+      )}
       {/* Header */}
       <header className={dappStyles.header} style={{ marginBottom: 40, borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: 20 }}>
         <div className={dappStyles.logoArea}>

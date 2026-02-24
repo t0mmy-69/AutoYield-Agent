@@ -1,7 +1,8 @@
 import { getAllChains, setChainEnabled, deleteChain } from '../../lib/chains/configs.js';
 import { getCredential } from '../../lib/credentials.js';
+import { withAdminAuth } from '../../lib/auth.js';
 
-export default function handler(req, res) {
+function handler(req, res) {
   if (req.method === 'GET') {
     const chains = getAllChains().map(c => ({
       id: c.id,
@@ -34,4 +35,10 @@ export default function handler(req, res) {
   }
 
   res.status(405).end();
+}
+
+// GET is public. PATCH/DELETE are admin-only.
+export default function chainsHandler(req, res) {
+  if (req.method === 'PATCH' || req.method === 'DELETE') return withAdminAuth(handler)(req, res);
+  return handler(req, res);
 }

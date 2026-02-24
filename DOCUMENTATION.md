@@ -270,6 +270,13 @@ Sends approval messages with inline Approve/Reject buttons. Handles callback que
 | `PATCH` | `/api/protocols` | `{ id, enabled: bool }` — toggle a protocol |
 | `GET` | `/api/chains` | List all chains with RPC config status |
 
+### Credentials
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/credentials` | List all known credential keys with their value, source (`file`/`env`/`unset`), and placeholder |
+| `PUT` | `/api/credentials` | `{ KEY: value, ... }` — save one or more credentials to `data/credentials.json`. Pass `""` to clear a key (falls back to env) |
+
 ### Telegram
 
 | Method | Endpoint | Description |
@@ -312,8 +319,9 @@ Full management and observability interface at `/admin`.
 2. **Live APR Snapshot** — visual APR cards per protocol, manual refresh button
 3. **Protocol Registry** — `ProtocolPanel` with enable/disable toggles
 4. **Chain Registry** — all chains with status (live/upcoming), RPC config indicator, phase
-5. **Decision Rules** — `RulesPanel` for live rule editing
-6. **Full Execution Log** — complete `HistoryTable`
+5. **API Credentials** — per-chain RPC URL + USDC address, per-protocol contract address. Each card shows source badge (`saved` / `env` / `not set`) and a Save button. Saved values are persisted to `data/credentials.json` and override env vars at runtime without server restart.
+6. **Decision Rules** — `RulesPanel` for live rule editing
+7. **Full Execution Log** — complete `HistoryTable`
 
 ---
 
@@ -329,14 +337,19 @@ All state is persisted as JSON files in `autoyield-agent/data/`.
 | `history.json` | `[{ action, from, to, deltaPct, txHash, ... }]` | All decisions and rotations |
 | `protocols.json` | `{ [id]: { enabled: bool } }` | Runtime protocol overrides (empty = use adapter defaults) |
 | `telegram.json` | `{ botToken, chatId }` | Telegram credentials |
+| `credentials.json` | `{ KEY: value, ... }` | RPC URLs and contract addresses saved via Admin UI. Overrides env vars at runtime. Does **not** store `AGENT_PRIVATE_KEY`. |
 
 ---
 
 ## 9. Environment Variables
 
+> **Note:** All variables except `AGENT_PRIVATE_KEY` can also be configured via the Admin Dashboard → **API Credentials** section. Values saved there are stored in `data/credentials.json` and take priority over env vars at runtime, without requiring a server restart.
+
 ```env
-# Required for Phase 1 (Sepolia)
+# Required — cannot be set via UI (security)
 AGENT_PRIVATE_KEY=0x...          # Agent wallet private key
+
+# Configurable via Admin UI or env (env used as fallback)
 RPC_URL=https://...              # Sepolia RPC URL
 USDC_ADDRESS=0x...               # USDC contract on Sepolia
 AAVE_POOL_ADDRESS=0x...          # AAVE V3 Pool on Sepolia
@@ -399,6 +412,22 @@ npm run dev
 ---
 
 ## 12. Changelog
+
+### 2026-02-24 — v2.0.2: API Credentials Manager
+
+**New: Runtime credential management via Admin Dashboard**
+- `lib/credentials.js` — runtime resolver: `getCredential(key)` checks `data/credentials.json` first, falls back to `process.env`. `saveCredentials(updates)`, `getCredentialStatus()`.
+- `data/credentials.json` — persistent store for RPC URLs and contract addresses. `AGENT_PRIVATE_KEY` intentionally excluded.
+- `pages/api/credentials.js` — `GET /api/credentials` (list all keys + source), `PUT /api/credentials` (save updates, whitelisted keys only).
+- `lib/agentWallet.js` — uses `getCredential('RPC_URL')` and `getCredential('USDC_ADDRESS')`.
+- `lib/protocols/adapters/aave.js` — uses `getCredential('AAVE_POOL_ADDRESS')` and `getCredential('USDC_ADDRESS')`.
+- `lib/protocols/adapters/compound.js` — uses `getCredential('COMPOUND_COMET_ADDRESS')`.
+- `pages/admin.js` — new **API Credentials** section with `CredentialCard` components:
+  - **Chain RPC & USDC**: Sepolia, Arbitrum, Optimism, Base cards
+  - **Protocol Contract Addresses**: Aave, Compound, Radiant, Morpho cards
+  - Per-card source badge (`● saved` / `● env` / `● not set`), Ready/Incomplete status, individual Save button
+
+---
 
 ### 2026-02-24 — v2.0.1: Merge & Conflict Resolution
 

@@ -247,8 +247,8 @@ export default function Dashboard() {
           <div style={styles.connectIcon}>⚡</div>
           <h2 style={styles.connectTitle}>Connect Your Wallet</h2>
           <p style={styles.connectDesc}>
-            Sign in with your Ethereum wallet to access your personal yield agent.
-            A dedicated agent wallet will be created for you automatically.
+            Sign in with any EVM wallet to access your personal yield agent.
+            Deposits supported on Ethereum Sepolia, Base Sepolia, and Arbitrum Sepolia.
           </p>
           {error && <div style={styles.error}>{error}</div>}
           <button
@@ -276,7 +276,7 @@ export default function Dashboard() {
       <div style={styles.header}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <h1 style={styles.logo}>AutoYield Agent</h1>
-          <span style={styles.network}>Sepolia Testnet</span>
+          <span style={styles.network}>Testnet · ETH · Base · Arbitrum</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           {user && (
@@ -295,7 +295,7 @@ export default function Dashboard() {
         <div style={styles.depositBanner}>
           <span style={{ color: '#888', fontSize: 13 }}>Your agent wallet:</span>
           <code style={styles.depositAddress}>{user.agentWallet}</code>
-          <span style={{ color: '#4ade80', fontSize: 12 }}>← Deposit USDC here to start</span>
+          <span style={{ color: '#4ade80', fontSize: 12 }}>← Deposit USDC here (Sepolia · Base Sepolia · Arbitrum Sepolia)</span>
         </div>
       )}
 

@@ -1,12 +1,13 @@
 # AutoYield Agent DApp
-Retail DeFi Auto-Pilot with Capital-Aware Decision Engine — v3.0 Multi-User
+Retail DeFi Auto-Pilot with Capital-Aware Decision Engine — v3.1
 
 AutoYield Agent is a browser-based DApp that creates a **dedicated Agent Wallet per user** and optimizes USDC yield across **N lending protocols on multiple chains** in a rational, gas-aware, and transparent way.
 
 - **Multi-user:** Each user connects their wallet (MetaMask SIWE), gets a personal agent wallet, and has isolated state/rules/history stored in SQLite.
+- **Any-EVM sign-in:** Connect from any EVM network (Polygon, mainnet, Arbitrum, etc.) — no network switching required.
 - **24/7 automation:** Background scheduler checks all users every 5 minutes and executes rotations automatically (or sends Telegram approval requests).
-- **Phase 1:** Sepolia testnet — Aave V3 + Compound V3.
-- **Phase 2:** Mainnet — Arbitrum, Optimism, Base — Radiant, Morpho adapters.
+- **Phase 1:** Testnets — Ethereum Sepolia, Base Sepolia, Arbitrum Sepolia — Aave V3 + Compound V3.
+- **Phase 2:** Mainnets — Ethereum, Arbitrum, Optimism, Base — Radiant, Morpho adapters.
 
 ---
 
@@ -204,7 +205,7 @@ This adds human-in-the-loop control for retail users.
 1. Open `/dapp` → click **Connect with MetaMask**
 2. Sign the SIWE challenge in MetaMask (no gas, off-chain signature)
 3. View your **Agent Wallet address** in the deposit banner
-4. Transfer USDC to your Agent Wallet (Sepolia faucet USDC for testnet)
+4. Transfer USDC to your Agent Wallet on any supported testnet (Ethereum Sepolia, Base Sepolia, or Arbitrum Sepolia)
 5. Configure rules (min delta, cooldown, execution mode, etc.)
 6. Click **Run Check** or wait for the 24/7 scheduler (every 5 min)
 7. View decision details:
@@ -298,7 +299,7 @@ Future:
 
 | Phase | Status | Description |
 |-------|--------|-------------|
-| Phase 1 | Live | MVP on Sepolia. Aave + Compound. Full AI decision engine. Telegram alerts. |
-| Phase 2 | Planned | Mainnet: Arbitrum, Optimism, Base. Radiant, Morpho adapters. Multi-chain routing. |
+| Phase 1 | Live | Testnets: Ethereum Sepolia, Base Sepolia, Arbitrum Sepolia. Aave + Compound. Any-EVM sign-in. Full AI decision engine. Telegram alerts. |
+| Phase 2 | Planned | Mainnets: Ethereum, Arbitrum, Optimism, Base. Radiant, Morpho adapters. Multi-chain routing. |
 | Phase 3 | Planned | ML-based APR forecasting. Uniswap V3 LP strategies. Leveraged yield. |
 | Phase 4 | Planned | `$AYD` governance token. DAO-controlled parameters. Decentralized agent network. |

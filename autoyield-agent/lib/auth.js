@@ -27,8 +27,7 @@ function buildSignMessage(address, nonce) {
   return (
     `Sign in to AutoYield\n\n` +
     `Address: ${address}\n` +
-    `Nonce: ${nonce}\n` +
-    `Issued: ${new Date().toISOString()}`
+    `Nonce: ${nonce}`
   );
 }
 

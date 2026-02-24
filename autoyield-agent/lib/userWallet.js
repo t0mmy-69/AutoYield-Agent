@@ -37,7 +37,7 @@ function decryptPrivateKey(encryptedKey) {
  * Generate a new random wallet for a user and store it encrypted in DB.
  * Returns { address }.
  */
-export function createUserWallet(userId, chainId = 'sepolia') {
+export function createUserWallet(userId, chainId = 'ethereum') {
   const wallet = ethers.Wallet.createRandom();
   const encryptedKey = encryptPrivateKey(wallet.privateKey);
   saveAgentWallet(userId, wallet.address, encryptedKey, chainId);
@@ -47,7 +47,7 @@ export function createUserWallet(userId, chainId = 'sepolia') {
 /**
  * Get an ethers.Wallet (signer) for a user on a given chain.
  */
-export function getUserSigner(userId, chainId = 'sepolia') {
+export function getUserSigner(userId, chainId = 'ethereum') {
   const row = getAgentWallet(userId);
   if (!row) throw new Error('No agent wallet found. Please log in again.');
   const privateKey = decryptPrivateKey(row.encrypted_key);
@@ -58,7 +58,7 @@ export function getUserSigner(userId, chainId = 'sepolia') {
 /**
  * Get USDC balance for a user's agent wallet on a given chain.
  */
-export async function getUserUsdcBalance(userId, chainId = 'sepolia') {
+export async function getUserUsdcBalance(userId, chainId = 'ethereum') {
   const row = getAgentWallet(userId);
   if (!row) return 0;
 
@@ -81,7 +81,7 @@ export async function getUserUsdcBalance(userId, chainId = 'sepolia') {
 /**
  * Create a provider for a given chain using credentials.
  */
-export function getProviderForChain(chainId = 'sepolia') {
+export function getProviderForChain(chainId = 'ethereum') {
   const chain = CHAINS[chainId];
   if (!chain) throw new Error(`Unknown chain: ${chainId}`);
   const rpcUrl = getCredential(chain.rpcEnvVar);

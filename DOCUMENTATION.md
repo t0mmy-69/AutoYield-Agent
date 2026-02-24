@@ -737,6 +737,39 @@ The SQLite database (`data/autoyield.db`) is created automatically on first run.
 
 ## 14. Changelog
 
+### 2026-02-24 — v3.3: Bug Fixes — APR History Dedup, Chain-Aware Executor, Telegram Replay Prevention, Crypto Decision IDs
+
+**Fix: APR history pollution (`lib/aprHistory.js`, `lib/scheduler.js`)**
+
+Previously `appendSnapshot()` was called once per user per scheduler cycle. With N registered users, N identical APR snapshots were written every 5 minutes, bloating `data/aprHistory.json` and making confidence scoring unreliable (it would see N near-identical consecutive readings as strong persistence rather than one real datapoint).
+
+- `lib/aprHistory.js` — `appendSnapshot()` now skips the write if the last snapshot is less than 60 seconds old. Any number of concurrent callers in the same scheduler cycle will result in exactly one new entry.
+- `lib/scheduler.js` — `runAllUsers()` now fetches APRs (`fetchAllAPRs()`) and gas cost (`estimateGasCostUsd()`) **once** via `Promise.all`, then appends the snapshot **once** and passes the shared results to each `runCheckForUser()` call. This eliminates N redundant RPC and gas API calls per cycle.
+- `runCheckForUser(userId, aprSnapshot?, history?, gasCostUsd?)` — now accepts optional pre-fetched params. Falls back to fetching fresh data when called standalone (e.g. tests or one-off checks).
+
+**Fix: Executor not chain-aware (`lib/executor.js`, `pages/api/approve.js`, `pages/api/check.js`)**
+
+`executeRotation()` was using `process.env.USDC_ADDRESS` hardcoded — always pointing at Sepolia regardless of the user's actual agent wallet chain.
+
+- `lib/executor.js` — added `chainId` parameter (default `'sepolia'`). USDC address is now resolved via `CHAINS[chainId].usdcEnvVar → getCredential() → fallback to USDC_ADDRESS env`. Throws a clear error if no USDC address is configured for the target chain.
+- `pages/api/approve.js` — `executeApproval()` now calls `getAgentWallet(userId)` to read `chain_id` from the DB and passes it to `executeRotation()`.
+- `lib/scheduler.js` — auto-execute path reads `getAgentWallet(userId).chain_id` and passes it to `executeRotation()`.
+
+**Fix: Telegram replay attack (`pages/api/telegram/webhook.js`, `lib/db.js`)**
+
+Telegram may retry webhook POST requests on 5xx or network errors. Previously, the same `callback_query_id` could trigger the approval flow twice, potentially executing two on-chain rotations.
+
+- `lib/db.js` — new `telegram_callbacks` table (`callback_id TEXT PRIMARY KEY, processed_at INTEGER`). New helpers: `isTelegramCallbackProcessed(callbackId)` and `markTelegramCallbackProcessed(callbackId)`.
+- `pages/api/telegram/webhook.js` — at the start of callback handling, checks `isTelegramCallbackProcessed(callbackQueryId)` and returns early if already seen. Calls `markTelegramCallbackProcessed()` **before** executing the rotation (prevents double execution even if the execute call throws and Telegram retries).
+
+**Fix: Predictable decision ID (`lib/decisionEngine.js`)**
+
+`id: \`decision_${Date.now()}\`` was predictable and could be guessed/forged in a crafted Telegram callback payload.
+
+- `lib/decisionEngine.js` — new helper `randomDecisionId()` uses `crypto.randomBytes(8).toString('hex')`. All `rotate()` and `noop()` returns now use `id: randomDecisionId()`.
+
+---
+
 ### 2026-02-24 — v3.2: Deposit/Withdraw UI, Telegram Toggle, Admin Delete Controls
 
 **Bug fix: `navigator.clipboard.writeText` crash**
@@ -778,39 +811,6 @@ The SQLite database (`data/autoyield.db`) is created automatically on first run.
   - `deleteChain(id)` — marks `{ deleted: true, enabled: false }` in `data/chains.json`.
 - `pages/api/chains.js` — added `PATCH` (`{ id, enabled }`) and `DELETE` (`{ id }`) methods. `GET` now also reads from credentials file for RPC config check.
 - `pages/admin.js` — Chain Registry table now has two new columns: **Control** (Enable/Disable toggle) and **Delete** button. State managed via `chainToggling` and `chainDeleting` local state.
-
----
-
-### 2026-02-24 — v3.3: Bug Fixes — APR History Dedup, Chain-Aware Executor, Telegram Replay Prevention, Crypto Decision IDs
-
-**Fix: APR history pollution (`lib/aprHistory.js`, `lib/scheduler.js`)**
-
-Previously `appendSnapshot()` was called once per user per scheduler cycle. With N registered users, N identical APR snapshots were written every 5 minutes, bloating `data/aprHistory.json` and making confidence scoring unreliable (it would see N near-identical consecutive readings as strong persistence rather than one real datapoint).
-
-- `lib/aprHistory.js` — `appendSnapshot()` now skips the write if the last snapshot is less than 60 seconds old. Any number of concurrent callers in the same scheduler cycle will result in exactly one new entry.
-- `lib/scheduler.js` — `runAllUsers()` now fetches APRs (`fetchAllAPRs()`) and gas cost (`estimateGasCostUsd()`) **once** via `Promise.all`, then appends the snapshot **once** and passes the shared results to each `runCheckForUser()` call. This eliminates N redundant RPC and gas API calls per cycle.
-- `runCheckForUser(userId, aprSnapshot?, history?, gasCostUsd?)` — now accepts optional pre-fetched params. Falls back to fetching fresh data when called standalone (e.g. tests or one-off checks).
-
-**Fix: Executor not chain-aware (`lib/executor.js`, `pages/api/approve.js`, `pages/api/check.js`)**
-
-`executeRotation()` was using `process.env.USDC_ADDRESS` hardcoded — always pointing at Sepolia regardless of the user's actual agent wallet chain.
-
-- `lib/executor.js` — added `chainId` parameter (default `'sepolia'`). USDC address is now resolved via `CHAINS[chainId].usdcEnvVar → getCredential() → fallback to USDC_ADDRESS env`. Throws a clear error if no USDC address is configured for the target chain.
-- `pages/api/approve.js` — `executeApproval()` now calls `getAgentWallet(userId)` to read `chain_id` from the DB and passes it to `executeRotation()`.
-- `lib/scheduler.js` — auto-execute path reads `getAgentWallet(userId).chain_id` and passes it to `executeRotation()`.
-
-**Fix: Telegram replay attack (`pages/api/telegram/webhook.js`, `lib/db.js`)**
-
-Telegram may retry webhook POST requests on 5xx or network errors. Previously, the same `callback_query_id` could trigger the approval flow twice, potentially executing two on-chain rotations.
-
-- `lib/db.js` — new `telegram_callbacks` table (`callback_id TEXT PRIMARY KEY, processed_at INTEGER`). New helpers: `isTelegramCallbackProcessed(callbackId)` and `markTelegramCallbackProcessed(callbackId)`.
-- `pages/api/telegram/webhook.js` — at the start of callback handling, checks `isTelegramCallbackProcessed(callbackQueryId)` and returns early if already seen. Calls `markTelegramCallbackProcessed()` **before** executing the rotation (prevents double execution even if the execute call throws and Telegram retries).
-
-**Fix: Predictable decision ID (`lib/decisionEngine.js`)**
-
-`id: \`decision_${Date.now()}\`` was predictable and could be guessed/forged in a crafted Telegram callback payload.
-
-- `lib/decisionEngine.js` — new helper `randomDecisionId()` uses `crypto.randomBytes(8).toString('hex')`. All `rotate()` and `noop()` returns now use `id: randomDecisionId()`.
 
 ---
 

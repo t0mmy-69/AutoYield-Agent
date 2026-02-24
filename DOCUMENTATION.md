@@ -2,7 +2,7 @@
 
 Welcome to the comprehensive system documentation for **AutoYield Agent**. This document serves as the master reference for the project's architecture, core modules, API surface, user interface, and integration points.
 
-> **Last updated:** 2026-02-23
+> **Last updated:** 2026-02-24
 > **Version:** 2.0 — Multi-Protocol Architecture
 
 ---
@@ -399,6 +399,17 @@ npm run dev
 ---
 
 ## 12. Changelog
+
+### 2026-02-24 — v2.0.1: Merge & Conflict Resolution
+
+**Resolved merge conflicts between multi-protocol branch and UI redesign on main:**
+- Preserved `APRPanel.jsx` multi-protocol logic (`PROTOCOL_COLORS`, dynamic `aprEntries` mapping, BEST badge)
+- Preserved `dapp.js` full layout: `TelegramPanel`, `ProtocolPanel`, admin header link
+- Synced `aprHistory.json` APR data from main (replaces empty array)
+- Incorporated `styles/Dapp.module.css` glassmorphism CSS module (new file from main, no conflict)
+- Synced redesigned components from main: `AgentWalletPanel`, `ApprovalPanel`, `DecisionPanel`, `HistoryTable`, `RulesPanel`
+
+---
 
 ### 2026-02-23 — v2.0: Multi-Protocol Architecture
 

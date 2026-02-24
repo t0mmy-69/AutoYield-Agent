@@ -303,6 +303,9 @@ export default function Dashboard() {
         agentAddress={state?.agentAddress ?? user?.agentWallet}
         usdcBalance={state?.usdcBalance}
         currentProtocol={state?.currentProtocol}
+        token={token}
+        userAddress={user?.address}
+        onRefresh={() => { fetchState(); fetchMe(); }}
       />
 
       <ApprovalPanel
@@ -322,7 +325,7 @@ export default function Dashboard() {
 
       <ProtocolPanel aprs={aprData?.aprs || {}} />
       <RulesPanel rules={rules} onSave={handleSaveRules} />
-      <TelegramPanel />
+      <TelegramPanel token={token} />
       <HistoryTable history={history} />
     </div>
   );

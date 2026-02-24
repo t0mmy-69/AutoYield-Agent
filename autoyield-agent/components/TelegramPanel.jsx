@@ -1,8 +1,29 @@
 import { useState, useEffect } from 'react';
 
-export default function TelegramPanel() {
+function copyToClipboard(text) {
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text);
+      return;
+    }
+  } catch { /* fall through */ }
+  const el = document.createElement('textarea');
+  el.value = text;
+  el.style.position = 'fixed';
+  el.style.opacity = '0';
+  document.body.appendChild(el);
+  el.select();
+  try { document.execCommand('copy'); } catch { /* ignore */ }
+  document.body.removeChild(el);
+}
+
+export default function TelegramPanel({ token }) {
   const [status, setStatus] = useState(null);
   const [config, setConfig] = useState(null);
+
+  // Telegram enable/disable (executionMode)
+  const [executionMode, setExecutionMode] = useState(null);
+  const [toggling, setToggling] = useState(false);
 
   // Form fields
   const [botToken, setBotToken] = useState('');
@@ -17,6 +38,8 @@ export default function TelegramPanel() {
   // Webhook copy
   const [copied, setCopied] = useState(false);
 
+  const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
+
   const fetchStatus = () =>
     fetch('/api/telegram/status').then(r => r.json()).then(setStatus).catch(() => {});
 
@@ -27,10 +50,34 @@ export default function TelegramPanel() {
       // Leave botToken blank — user must re-enter to update (security)
     }).catch(() => {});
 
+  const fetchRules = () =>
+    fetch('/api/rules', { headers: authHeader }).then(r => r.json()).then(d => {
+      setExecutionMode(d.executionMode || 'manual_confirm');
+    }).catch(() => {});
+
   useEffect(() => {
     fetchStatus();
     fetchConfig();
+    fetchRules();
   }, []);
+
+  const isTelegramEnabled = executionMode === 'telegram_approval';
+
+  const handleToggleTelegram = async () => {
+    setToggling(true);
+    const newMode = isTelegramEnabled ? 'manual_confirm' : 'telegram_approval';
+    try {
+      const rulesRes = await fetch('/api/rules', { headers: authHeader });
+      const currentRules = rulesRes.ok ? await rulesRes.json() : {};
+      await fetch('/api/rules', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...authHeader },
+        body: JSON.stringify({ ...currentRules, executionMode: newMode }),
+      });
+      setExecutionMode(newMode);
+    } catch { /* ignore */ }
+    setToggling(false);
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -91,7 +138,7 @@ export default function TelegramPanel() {
 
   const handleCopy = () => {
     if (status?.webhookUrl) {
-      navigator.clipboard.writeText(status.webhookUrl);
+      copyToClipboard(status.webhookUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
@@ -105,9 +152,27 @@ export default function TelegramPanel() {
       {/* Header */}
       <div style={s.headerRow}>
         <h2 style={s.title}>Telegram Bot</h2>
-        <span style={isConfigured ? s.badgeOk : s.badgeWarn}>
-          {isConfigured ? '● Connected' : '● Not Connected'}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {/* Enable/Disable Toggle */}
+          <button
+            onClick={handleToggleTelegram}
+            disabled={toggling}
+            style={{
+              ...s.toggleBtn,
+              background: isTelegramEnabled ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.05)',
+              color: isTelegramEnabled ? '#4ade80' : '#888',
+              borderColor: isTelegramEnabled ? 'rgba(16,185,129,0.4)' : 'rgba(255,255,255,0.15)',
+              opacity: toggling ? 0.6 : 1,
+            }}
+            title={isTelegramEnabled ? 'Tắt Telegram Approval' : 'Bật Telegram Approval'}
+          >
+            <span style={s.toggleDot(isTelegramEnabled)} />
+            {isTelegramEnabled ? 'Telegram: ON' : 'Telegram: OFF'}
+          </button>
+          <span style={isConfigured ? s.badgeOk : s.badgeWarn}>
+            {isConfigured ? '● Connected' : '● Not Connected'}
+          </span>
+        </div>
       </div>
 
       <p style={s.desc}>
@@ -261,4 +326,6 @@ const s = {
 
   testRow: { borderTop: '1px solid #2a2a4a', paddingTop: 14, marginTop: 14, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' },
   testBtn: { padding: '9px 20px', background: '#4f46e5', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 13 },
+  toggleBtn: { display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', border: '1px solid', borderRadius: 20, cursor: 'pointer', fontSize: 12, fontWeight: 700, transition: 'all 0.2s' },
+  toggleDot: (on) => ({ width: 8, height: 8, borderRadius: '50%', background: on ? '#4ade80' : '#555', display: 'inline-block', transition: 'background 0.2s' }),
 };

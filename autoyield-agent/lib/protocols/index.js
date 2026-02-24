@@ -26,15 +26,18 @@ function writeConfig(config) {
 }
 
 // Returns all protocols with runtime overrides (from data/protocols.json) applied
+// Protocols marked as deleted are filtered out
 export function getAllProtocols() {
   const config = readConfig();
-  return ALL_ADAPTERS.map(a => {
-    const override = config[a.id];
-    return {
-      ...a,
-      enabled: override?.enabled !== undefined ? override.enabled : a.enabled,
-    };
-  });
+  return ALL_ADAPTERS
+    .filter(a => !config[a.id]?.deleted)
+    .map(a => {
+      const override = config[a.id];
+      return {
+        ...a,
+        enabled: override?.enabled !== undefined ? override.enabled : a.enabled,
+      };
+    });
 }
 
 export function getEnabledProtocols() {
@@ -49,6 +52,22 @@ export function getProtocol(id) {
 export function setProtocolEnabled(id, enabled) {
   const config = readConfig();
   config[id] = { ...(config[id] || {}), enabled };
+  writeConfig(config);
+}
+
+// Mark a protocol as deleted — it will be hidden from all registries
+export function deleteProtocol(id) {
+  const config = readConfig();
+  config[id] = { ...(config[id] || {}), deleted: true, enabled: false };
+  writeConfig(config);
+}
+
+// Restore a deleted protocol
+export function restoreProtocol(id) {
+  const config = readConfig();
+  if (config[id]) {
+    delete config[id].deleted;
+  }
   writeConfig(config);
 }
 

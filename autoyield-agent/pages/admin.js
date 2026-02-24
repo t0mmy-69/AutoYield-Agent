@@ -74,6 +74,8 @@ export default function AdminDashboard() {
   const [credentials, setCredentials] = useState({}); // key → { source, fileValue, ... }
   const [credEdits, setCredEdits] = useState({});     // key → current input value
   const [credSaving, setCredSaving] = useState(null); // group id being saved
+  const [chainToggling, setChainToggling] = useState(null);
+  const [chainDeleting, setChainDeleting] = useState(null);
 
   const load = useCallback(async () => {
     const [stateRes, rulesRes, historyRes, chainsRes, credRes] = await Promise.all([
@@ -139,6 +141,33 @@ export default function AdminDashboard() {
       body: JSON.stringify(newRules),
     });
     if (res.ok) setRules(await res.json());
+  };
+
+  const handleChainToggle = async (id, currentEnabled) => {
+    setChainToggling(id);
+    try {
+      const res = await fetch('/api/chains', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, enabled: !currentEnabled }),
+      });
+      if (res.ok) setChains(prev => prev.map(c => c.id === id ? { ...c, enabled: !currentEnabled } : c));
+    } catch { /* ignore */ }
+    setChainToggling(null);
+  };
+
+  const handleChainDelete = async (id, name) => {
+    if (!confirm(`Xóa chain "${name}" khỏi danh sách? Có thể restore lại bằng cách xóa data/chains.json.`)) return;
+    setChainDeleting(id);
+    try {
+      const res = await fetch('/api/chains', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      if (res.ok) setChains(prev => prev.filter(c => c.id !== id));
+    } catch { /* ignore */ }
+    setChainDeleting(null);
   };
 
   const totalRotations = history.filter(h => h.action === 'ROTATE').length;
@@ -224,7 +253,7 @@ export default function AdminDashboard() {
             <table style={styles.table}>
               <thead>
                 <tr>
-                  {['Network', 'Chain ID', 'Status', 'RPC', 'Phase', 'Explorer'].map(h => (
+                  {['Network', 'Chain ID', 'Status', 'RPC', 'Phase', 'Explorer', 'Control', ''].map(h => (
                     <th key={h} style={styles.th}>{h}</th>
                   ))}
                 </tr>
@@ -257,6 +286,34 @@ export default function AdminDashboard() {
                       <a href={c.explorer} target="_blank" rel="noreferrer" style={{ color: '#6366f1', fontSize: '0.85rem', textDecoration: 'none', fontWeight: 600 }}>
                         {c.explorer.replace('https://', '').split('/')[0]}
                       </a>
+                    </td>
+                    <td style={styles.td}>
+                      <button
+                        onClick={() => handleChainToggle(c.id, c.enabled)}
+                        disabled={chainToggling === c.id}
+                        style={{
+                          ...styles.actionBtn,
+                          background: c.enabled ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.1)',
+                          color: c.enabled ? '#ef4444' : '#10b981',
+                          borderColor: c.enabled ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.3)',
+                          opacity: chainToggling === c.id ? 0.5 : 1,
+                        }}>
+                        {chainToggling === c.id ? '...' : c.enabled ? 'Disable' : 'Enable'}
+                      </button>
+                    </td>
+                    <td style={styles.td}>
+                      <button
+                        onClick={() => handleChainDelete(c.id, c.name)}
+                        disabled={chainDeleting === c.id}
+                        style={{
+                          ...styles.actionBtn,
+                          background: 'rgba(239,68,68,0.08)',
+                          color: '#f87171',
+                          borderColor: 'rgba(239,68,68,0.25)',
+                          opacity: chainDeleting === c.id ? 0.5 : 1,
+                        }}>
+                        {chainDeleting === c.id ? '...' : 'Delete'}
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -419,4 +476,5 @@ const styles = {
   credGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 },
   credInput: { width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, padding: '8px 10px', color: '#f8fafc', fontSize: '0.8rem', fontFamily: 'monospace', outline: 'none', boxSizing: 'border-box' },
   saveCredBtn: { background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 6, padding: '5px 14px', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', whiteSpace: 'nowrap' },
+  actionBtn: { padding: '5px 14px', border: '1px solid', borderRadius: 8, cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700, transition: 'all 0.2s', outline: 'none', whiteSpace: 'nowrap' },
 };

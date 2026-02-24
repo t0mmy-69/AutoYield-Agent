@@ -110,10 +110,10 @@ export default function ProtocolPanel({ aprs = {}, showToggle = false }) {
                   </td>
                   <td style={styles.td}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontWeight: 800, color: p.enabled && apr != null ? '#10b981' : '#94a3b8', fontSize: '1.05rem' }}>
+                      <span style={{ fontWeight: 800, color: p.enabled && apr != null ? '#10b981' : '#94a3b8', fontSize: '1.05rem', textShadow: p.enabled && apr != null ? '0 0 10px rgba(16, 185, 129, 0.3)' : 'none' }}>
                         {p.enabled && apr != null ? `${apr.toFixed(2)}%` : '—'}
                       </span>
-                      {isBest && <span style={styles.bestBadge}>BEST</span>}
+                      {isBest && <span style={styles.bestBadge} className="text-gradient-emerald">BEST</span>}
                     </div>
                   </td>
                   <td style={styles.td}>
@@ -127,11 +127,11 @@ export default function ProtocolPanel({ aprs = {}, showToggle = false }) {
                         <button
                           onClick={() => handleToggle(p.id, p.enabled)}
                           disabled={toggling === p.id}
+                          className="btn-neon"
                           style={{
                             ...styles.toggleBtn,
-                            background: p.enabled ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                            borderColor: p.enabled ? 'rgba(239, 68, 68, 0.4)' : 'rgba(16, 185, 129, 0.4)',
                             color: p.enabled ? '#ef4444' : '#10b981',
-                            borderColor: p.enabled ? 'rgba(239, 68, 68, 0.3)' : 'rgba(16, 185, 129, 0.3)',
                             opacity: toggling === p.id ? 0.5 : 1,
                           }}>
                           {toggling === p.id ? '...' : p.enabled ? 'Disable' : 'Enable'}
@@ -141,11 +141,11 @@ export default function ProtocolPanel({ aprs = {}, showToggle = false }) {
                         <button
                           onClick={() => handleDelete(p.id, p.name)}
                           disabled={deleting === p.id}
+                          className="btn-neon"
                           style={{
                             ...styles.toggleBtn,
-                            background: 'rgba(239,68,68,0.08)',
+                            borderColor: 'rgba(239,68,68,0.3)',
                             color: '#f87171',
-                            borderColor: 'rgba(239,68,68,0.25)',
                             opacity: deleting === p.id ? 0.5 : 1,
                           }}>
                           {deleting === p.id ? '...' : 'Delete'}
@@ -168,8 +168,8 @@ const styles = {
   table: { width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' },
   th: { padding: '12px 24px', textAlign: 'left', color: '#94a3b8', fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.1)', whiteSpace: 'nowrap', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px' },
   td: { padding: '16px 24px', color: '#f8fafc', whiteSpace: 'nowrap', verticalAlign: 'middle' },
-  chip: { background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, padding: '3px 10px', fontSize: '0.75rem', fontWeight: 600 },
-  bestBadge: { background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: 6, padding: '2px 8px', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.5px' },
+  chip: { background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 6, padding: '3px 10px', fontSize: '0.75rem', fontWeight: 600 },
+  bestBadge: { background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: 6, padding: '2px 8px', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.5px', boxShadow: '0 0 10px rgba(16, 185, 129, 0.1)' },
   statusBadge: { padding: '4px 12px', borderRadius: 6, fontWeight: 700, fontSize: '0.75rem', border: '1px solid' },
-  toggleBtn: { padding: '6px 16px', border: '1px solid', borderRadius: 8, cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700, transition: 'all 0.2s', outline: 'none' },
+  toggleBtn: { padding: '6px 16px', fontSize: '0.8rem' },
 };

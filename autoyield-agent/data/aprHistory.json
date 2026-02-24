@@ -6,42 +6,6 @@
     },
     "best": "aave",
     "bestAPR": 4.2,
-    "timestamp": 1771916619733
-  },
-  {
-    "aprs": {
-      "aave": 4.2,
-      "compound": 3.6
-    },
-    "best": "aave",
-    "bestAPR": 4.2,
-    "timestamp": 1771916796733
-  },
-  {
-    "aprs": {
-      "aave": 4.2,
-      "compound": 3.6
-    },
-    "best": "aave",
-    "bestAPR": 4.2,
-    "timestamp": 1771916906201
-  },
-  {
-    "aprs": {
-      "aave": 4.2,
-      "compound": 3.6
-    },
-    "best": "aave",
-    "bestAPR": 4.2,
-    "timestamp": 1771920210302
-  },
-  {
-    "aprs": {
-      "aave": 4.2,
-      "compound": 3.6
-    },
-    "best": "aave",
-    "bestAPR": 4.2,
     "timestamp": 1771920230706
   },
   {
@@ -214,5 +178,41 @@
     "best": "aave",
     "bestAPR": 4.2,
     "timestamp": 1771924537691
+  },
+  {
+    "aprs": {
+      "aave": 4.2,
+      "compound": 3.6
+    },
+    "best": "aave",
+    "bestAPR": 4.2,
+    "timestamp": 1771929341109
+  },
+  {
+    "aprs": {
+      "aave": 4.2,
+      "compound": 3.6
+    },
+    "best": "aave",
+    "bestAPR": 4.2,
+    "timestamp": 1771929621361
+  },
+  {
+    "aprs": {
+      "aave": 4.2,
+      "compound": 3.6
+    },
+    "best": "aave",
+    "bestAPR": 4.2,
+    "timestamp": 1771929633937
+  },
+  {
+    "aprs": {
+      "aave": 4.2,
+      "compound": 3.6
+    },
+    "best": "aave",
+    "bestAPR": 4.2,
+    "timestamp": 1771929633971
   }
 ]

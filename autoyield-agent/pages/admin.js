@@ -185,8 +185,8 @@ export default function AdminDashboard() {
       <header className={dappStyles.header} style={{ marginBottom: 40, borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: 20 }}>
         <div className={dappStyles.logoArea}>
           <Link href="/dapp" style={styles.backLink}>← DApp</Link>
-          <span style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f8fafc', marginLeft: 16 }}>Admin Dashboard</span>
-          <span style={styles.adminBadge}>ADMIN</span>
+          <span style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f8fafc', marginLeft: 16 }} className="text-gradient-cyan">Admin Dashboard</span>
+          <span style={styles.adminBadge} className="text-gradient-pink">ADMIN</span>
         </div>
         <div style={{ color: '#94a3b8', fontSize: '0.9rem', fontWeight: 500 }}>
           {new Date().toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
@@ -275,7 +275,7 @@ export default function AdminDashboard() {
       <section style={styles.section}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0 0 16px 4px' }}>
           <h2 style={styles.sectionTitle}>Live APR Snapshot</h2>
-          <button onClick={handleRefreshAPR} disabled={refreshing} style={styles.refreshBtn}>
+          <button onClick={handleRefreshAPR} disabled={refreshing} className="btn-neon btn-neon-primary" style={{ ...styles.refreshBtn, opacity: refreshing ? 0.7 : 1 }}>
             {refreshing ? 'Fetching...' : 'Refresh APRs'}
           </button>
         </div>
@@ -286,10 +286,10 @@ export default function AdminDashboard() {
               return (
                 <div key={id} className={dappStyles.glassCard} style={{ ...styles.aprCard, borderColor: isBest ? 'rgba(16, 185, 129, 0.4)' : 'rgba(255,255,255,0.08)', boxShadow: isBest ? '0 0 20px rgba(16, 185, 129, 0.15)' : undefined }}>
                   <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>{id}</div>
-                  <div style={{ fontSize: '2.2rem', fontWeight: 900, color: isBest ? '#10b981' : '#f8fafc', margin: '12px 0' }}>
+                  <div style={{ fontSize: '2.4rem', fontWeight: 900, color: '#f8fafc', margin: '12px 0' }} className={isBest ? 'text-gradient-emerald' : ''}>
                     {apr.toFixed(2)}%
                   </div>
-                  {isBest && <span style={styles.bestBadge}>⭐ BEST RATE</span>}
+                  {isBest && <span style={styles.bestBadge} className="text-gradient-emerald">⭐ BEST RATE</span>}
                 </div>
               );
             })}
@@ -359,11 +359,11 @@ export default function AdminDashboard() {
                       <button
                         onClick={() => handleChainToggle(c.id, c.enabled)}
                         disabled={chainToggling === c.id}
+                        className="btn-neon"
                         style={{
                           ...styles.actionBtn,
-                          background: c.enabled ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.1)',
+                          borderColor: c.enabled ? 'rgba(239,68,68,0.4)' : 'rgba(16,185,129,0.4)',
                           color: c.enabled ? '#ef4444' : '#10b981',
-                          borderColor: c.enabled ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.3)',
                           opacity: chainToggling === c.id ? 0.5 : 1,
                         }}>
                         {chainToggling === c.id ? '...' : c.enabled ? 'Disable' : 'Enable'}
@@ -373,11 +373,11 @@ export default function AdminDashboard() {
                       <button
                         onClick={() => handleChainDelete(c.id, c.name)}
                         disabled={chainDeleting === c.id}
+                        className="btn-neon"
                         style={{
                           ...styles.actionBtn,
-                          background: 'rgba(239,68,68,0.08)',
+                          borderColor: 'rgba(239,68,68,0.3)',
                           color: '#f87171',
-                          borderColor: 'rgba(239,68,68,0.25)',
                           opacity: chainDeleting === c.id ? 0.5 : 1,
                         }}>
                         {chainDeleting === c.id ? '...' : 'Delete'}
@@ -458,7 +458,7 @@ function CredentialCard({ group, credentials, credEdits, setCredEdits, onSave, s
   });
 
   return (
-    <div style={{ ...styles.card, borderTop: `3px solid ${group.color}`, minWidth: 0 }}>
+    <div style={{ ...styles.card, borderTop: `3px solid ${group.color}`, minWidth: 0 }} className="glass-panel">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
         <div>
           <div style={{ fontWeight: 800, color: '#eee', fontSize: 14 }}>{group.name}</div>
@@ -503,7 +503,8 @@ function CredentialCard({ group, credentials, credEdits, setCredEdits, onSave, s
               onChange={e => setCredEdits(prev => ({ ...prev, [field.key]: e.target.value }))}
               placeholder={cred.source === 'env' ? '(configured via env)' : field.placeholder}
               spellCheck={false}
-              style={styles.credInput}
+              className="input-glass"
+              style={{ ...styles.credInput, padding: '10px 12px' }}
             />
           </div>
         );
@@ -526,23 +527,23 @@ const styles = {
   adminBadge: { background: 'rgba(236, 72, 153, 0.15)', color: '#f472b6', border: '1px solid rgba(236, 72, 153, 0.3)', borderRadius: 6, padding: '4px 10px', fontSize: '0.75rem', fontWeight: 800, letterSpacing: '1px', marginLeft: 16 },
   backLink: { color: '#94a3b8', textDecoration: 'none', fontSize: '0.9rem', padding: '8px 16px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontWeight: 600, transition: 'all 0.2s' },
   section: { marginBottom: 48 },
-  sectionTitle: { margin: '0 0 8px', fontSize: '1.1rem', color: '#f8fafc', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' },
+  sectionTitle: { margin: '0 0 8px', fontSize: '1.2rem', color: '#f8fafc', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' },
   sectionDesc: { margin: '0 0 20px', fontSize: '0.9rem', color: '#94a3b8' },
   statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 16 },
   aprGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 },
   aprCard: { padding: '28px 20px', textAlign: 'center', transition: 'all 0.3s' },
-  bestBadge: { background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: 6, padding: '4px 10px', fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.5px', display: 'inline-block' },
+  bestBadge: { background: 'rgba(16, 185, 129, 0.05)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: 6, padding: '4px 10px', fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.5px', display: 'inline-block', boxShadow: '0 0 10px rgba(16, 185, 129, 0.1)' },
   emptyState: { color: '#94a3b8', textAlign: 'center', padding: '48px 0', fontSize: '0.95rem' },
   card: { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '20px 24px', marginBottom: 16 },
   table: { width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' },
-  th: { padding: '12px 24px', textAlign: 'left', color: '#94a3b8', fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.1)', whiteSpace: 'nowrap', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px' },
-  td: { padding: '16px 24px', color: '#f8fafc', whiteSpace: 'nowrap', verticalAlign: 'middle' },
-  chip: { background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, padding: '3px 10px', fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8' },
+  th: { padding: '12px 24px', textAlign: 'left', color: '#64748b', fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.05)', whiteSpace: 'nowrap', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px' },
+  td: { padding: '16px 24px', color: '#f8fafc', whiteSpace: 'nowrap', verticalAlign: 'middle', borderBottom: '1px solid rgba(255,255,255,0.02)' },
+  chip: { background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 6, padding: '3px 10px', fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8' },
   statusBadge: { padding: '4px 12px', borderRadius: 6, fontWeight: 700, fontSize: '0.75rem', border: '1px solid' },
-  refreshBtn: { background: 'linear-gradient(135deg, #6366f1, #4f46e5)', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 20px', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', boxShadow: '0 4px 15px rgba(99, 102, 241, 0.3)', transition: 'all 0.2s', outline: 'none' },
-  subSectionTitle: { margin: '0 0 12px', fontSize: '0.8rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' },
+  refreshBtn: { padding: '10px 20px', fontSize: '0.95rem' },
+  subSectionTitle: { margin: '0 0 12px', fontSize: '0.85rem', color: '#64748b', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' },
   credGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 },
-  credInput: { width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, padding: '8px 10px', color: '#f8fafc', fontSize: '0.8rem', fontFamily: 'monospace', outline: 'none', boxSizing: 'border-box' },
-  saveCredBtn: { background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 6, padding: '5px 14px', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', whiteSpace: 'nowrap' },
-  actionBtn: { padding: '5px 14px', border: '1px solid', borderRadius: 8, cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700, transition: 'all 0.2s', outline: 'none', whiteSpace: 'nowrap' },
+  credInput: { width: '100%', fontFamily: 'monospace', boxSizing: 'border-box' },
+  saveCredBtn: { background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 6, padding: '6px 14px', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s', boxShadow: '0 0 10px rgba(16, 185, 129, 0.1)' },
+  actionBtn: { padding: '6px 14px', fontSize: '0.78rem' },
 };

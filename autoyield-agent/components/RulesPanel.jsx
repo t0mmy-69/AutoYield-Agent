@@ -43,7 +43,8 @@ export default function RulesPanel({ rules, onSave }) {
               max={max}
               value={localRules[key] ?? ''}
               onChange={e => handleChange(key, e.target.value)}
-              style={styles.input}
+              className="input-glass"
+              style={{ padding: '10px 12px', fontSize: '0.95rem' }}
             />
           </label>
         ))}
@@ -52,14 +53,15 @@ export default function RulesPanel({ rules, onSave }) {
           <select
             value={localRules.executionMode || 'manual_confirm'}
             onChange={e => handleChange('executionMode', e.target.value)}
-            style={styles.input}>
+            className="input-glass"
+            style={{ padding: '10px 12px', fontSize: '0.95rem', cursor: 'pointer' }}>
             <option value="manual_confirm">Manual Confirm (UI)</option>
             <option value="telegram_approval">Telegram Approval</option>
             <option value="auto">Auto Execute</option>
           </select>
         </label>
       </div>
-      <button onClick={handleSave} disabled={saving} style={{ ...styles.btn, opacity: saving ? 0.7 : 1 }}>
+      <button onClick={handleSave} disabled={saving} className={`btn-neon ${saved ? '' : 'btn-neon-primary'}`} style={{ ...styles.btn, opacity: saving ? 0.7 : 1 }}>
         {saving ? 'Saving...' : saved ? '✓ Saved Successfully' : 'Apply Rules'}
       </button>
     </div>
@@ -70,15 +72,5 @@ const styles = {
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16, marginBottom: 24 },
   field: { display: 'flex', flexDirection: 'column', gap: 6 },
   label: { fontSize: '0.85rem', color: '#94a3b8', fontWeight: 500 },
-  input: {
-    background: 'rgba(0,0,0,0.3)',
-    border: '1px solid rgba(255,255,255,0.1)',
-    borderRadius: 8,
-    padding: '10px 12px',
-    color: '#f8fafc',
-    fontSize: '0.95rem',
-    outline: 'none',
-    transition: 'border-color 0.2s',
-  },
-  btn: { width: '100%', padding: '12px 0', background: 'rgba(255,255,255,0.05)', color: '#f8fafc', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, fontWeight: 700, cursor: 'pointer', fontSize: '0.95rem', transition: 'all 0.2s' },
+  btn: { width: '100%', padding: '14px 0', fontSize: '1rem', letterSpacing: '0.5px' },
 };

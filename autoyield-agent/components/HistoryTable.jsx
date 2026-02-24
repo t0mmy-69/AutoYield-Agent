@@ -40,8 +40,10 @@ export default function HistoryTable({ history }) {
                 </td>
                 <td style={styles.td}>{entry.deltaPct != null ? `+${entry.deltaPct.toFixed(3)}%` : '—'}</td>
                 <td style={styles.td}>{entry.confidenceScore?.toFixed(2) ?? '—'}</td>
-                <td style={{ ...styles.td, color: (entry.netAnnualGain || 0) >= 0 ? '#10b981' : '#ef4444', fontWeight: 600 }}>
-                  {entry.netAnnualGain != null ? `${entry.netAnnualGain >= 0 ? '+' : ''}$${entry.netAnnualGain.toFixed(2)}` : '—'}
+                <td style={{ ...styles.td, fontWeight: 700 }}>
+                  <span className={entry.netAnnualGain >= 0 ? 'text-gradient-emerald' : 'text-gradient-pink'}>
+                    {entry.netAnnualGain != null ? `${entry.netAnnualGain >= 0 ? '+' : ''}$${entry.netAnnualGain.toFixed(2)}` : '—'}
+                  </span>
                 </td>
                 <td style={styles.td}>
                   {entry.txHash
@@ -68,7 +70,7 @@ function formatTime(ts) {
 
 const styles = {
   table: { width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' },
-  th: { padding: '12px 24px', textAlign: 'left', color: '#94a3b8', fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.1)', whiteSpace: 'nowrap', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px' },
-  td: { padding: '16px 24px', color: '#f8fafc', whiteSpace: 'nowrap' },
+  th: { padding: '12px 24px', textAlign: 'left', color: '#64748b', fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.05)', whiteSpace: 'nowrap', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px' },
+  td: { padding: '16px 24px', color: '#f8fafc', whiteSpace: 'nowrap', borderBottom: '1px solid rgba(255,255,255,0.02)' },
   badge: { padding: '4px 10px', borderRadius: 6, fontWeight: 700, fontSize: '0.75rem', letterSpacing: '0.5px' },
 };

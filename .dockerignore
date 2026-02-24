@@ -1,0 +1,19 @@
+# Exclude local node_modules (wrong arch for container)
+autoyield-agent/node_modules
+
+# Exclude Next.js build cache
+autoyield-agent/.next
+
+# Exclude local data (should be a volume in production)
+autoyield-agent/data
+
+# Exclude local env files (use Railway env vars instead)
+autoyield-agent/.env.local
+autoyield-agent/.env*.local
+
+# Exclude git and docs
+.git
+.gitignore
+README.md
+DOCUMENTATION.md
+spec/

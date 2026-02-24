@@ -124,5 +124,41 @@
     "best": "aave",
     "bestAPR": 4.2,
     "timestamp": 1771898249294
+  },
+  {
+    "aprs": {
+      "aave": 4.2,
+      "compound": 3.6
+    },
+    "best": "aave",
+    "bestAPR": 4.2,
+    "timestamp": 1771901581620
+  },
+  {
+    "aprs": {
+      "aave": 4.2,
+      "compound": 3.6
+    },
+    "best": "aave",
+    "bestAPR": 4.2,
+    "timestamp": 1771901581627
+  },
+  {
+    "aprs": {
+      "aave": 4.2,
+      "compound": 3.6
+    },
+    "best": "aave",
+    "bestAPR": 4.2,
+    "timestamp": 1771901615746
+  },
+  {
+    "aprs": {
+      "aave": 4.2,
+      "compound": 3.6
+    },
+    "best": "aave",
+    "bestAPR": 4.2,
+    "timestamp": 1771901616859
   }
 ]

@@ -15,6 +15,14 @@ export function getHistory() {
 export function appendSnapshot(snapshot) {
   const history = getHistory();
   const normalized = normalizeSnapshot(snapshot);
+
+  // Dedup: skip if the last snapshot is less than 60 seconds old.
+  // This prevents N identical snapshots when N users trigger checks in the same scheduler cycle.
+  const last = history[history.length - 1];
+  if (last && normalized.timestamp - last.timestamp < 60 * 1000) {
+    return history; // return existing history unchanged
+  }
+
   history.push(normalized);
   const trimmed = history.slice(-MAX_SNAPSHOTS);
   fs.writeFileSync(HISTORY_FILE, JSON.stringify(trimmed, null, 2));

@@ -6,10 +6,10 @@
  * The scheduler respects per-user rules.cooldownMinutes and uses scheduler_lock
  * to prevent overlapping runs for the same user.
  */
-import { getAllUsers } from './db.js';
+import { getAllUsers, getAgentWallet } from './db.js';
 import { acquireSchedulerLock, releaseSchedulerLock } from './db.js';
 import { fetchAllAPRs } from './aprFetcher.js';
-import { appendSnapshot, getHistory } from './aprHistory.js';
+import { appendSnapshot } from './aprHistory.js';
 import { runDecisionEngine } from './decisionEngine.js';
 import { estimateGasCostUsd } from './gasEstimator.js';
 import { getUserSigner, getUserUsdcBalance } from './userWallet.js';
@@ -33,14 +33,32 @@ export function startScheduler() {
 
 export async function runAllUsers() {
   const users = getAllUsers();
+  if (users.length === 0) return;
+
+  // Fetch APRs and gas cost ONCE per cycle — shared across all users.
+  // Avoids N redundant RPC + gas API calls when N users are registered.
+  let aprSnapshot, history, gasCostUsd;
+  try {
+    [aprSnapshot, gasCostUsd] = await Promise.all([fetchAllAPRs(), estimateGasCostUsd()]);
+    history = appendSnapshot(aprSnapshot);
+  } catch (err) {
+    console.error('[Scheduler] APR/gas fetch failed:', err.message);
+    return;
+  }
+
   for (const user of users) {
-    runCheckForUser(user.id).catch(err =>
+    runCheckForUser(user.id, aprSnapshot, history, gasCostUsd).catch(err =>
       console.error(`[Scheduler] user ${user.id} error:`, err.message)
     );
   }
 }
 
-export async function runCheckForUser(userId) {
+/**
+ * Run a decision check for a single user.
+ * aprSnapshot / history / gasCostUsd can be pre-fetched (from runAllUsers)
+ * or left undefined (fetched fresh when called standalone, e.g. tests).
+ */
+export async function runCheckForUser(userId, aprSnapshot, history, gasCostUsd) {
   // Prevent overlapping runs for same user (lock TTL = 4 min)
   if (!acquireSchedulerLock(userId)) {
     console.log(`[Scheduler] user ${userId} — lock held, skipping`);
@@ -55,12 +73,15 @@ export async function runCheckForUser(userId) {
       return { skipped: true, reason: 'no_wallet' };
     }
 
+    // Fetch fresh if not provided (standalone / direct call)
+    if (!aprSnapshot) {
+      [aprSnapshot, gasCostUsd] = await Promise.all([fetchAllAPRs(), estimateGasCostUsd()]);
+      history = appendSnapshot(aprSnapshot);
+    }
+
     const usdcBalance = await getUserUsdcBalance(userId);
-    const aprSnapshot = await fetchAllAPRs();
-    const history = appendSnapshot(aprSnapshot);
     const state = readStateForUser(userId);
     const rules = readRulesForUser(userId);
-    const gasCostUsd = await estimateGasCostUsd();
 
     const stateWithBalance = { ...state, userBalance: usdcBalance };
     const decision = runDecisionEngine({ state: stateWithBalance, aprSnapshot, history, rules, gasCostUsd });
@@ -73,7 +94,10 @@ export async function runCheckForUser(userId) {
     writeStateForUser(userId, { ...state, pendingApproval: decisionWithExpiry });
 
     if (rules.executionMode === 'auto') {
-      const result = await executeRotation({ from: decision.from, to: decision.to, signer });
+      // Pass chain-specific USDC address via chainId
+      const wallet = getAgentWallet(userId);
+      const chainId = wallet?.chain_id || 'sepolia';
+      const result = await executeRotation({ from: decision.from, to: decision.to, signer, chainId });
       const historyEntry = {
         ...decision,
         action: 'ROTATE',

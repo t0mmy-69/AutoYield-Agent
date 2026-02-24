@@ -1,9 +1,9 @@
 # AutoYield Agent DApp
-Retail DeFi Auto-Pilot with Capital-Aware Decision Engine
+Retail DeFi Auto-Pilot with Capital-Aware Decision Engine — v2.0 Multi-Protocol
 
-AutoYield Agent is a browser-based DApp that creates a dedicated Agent Wallet and helps retail stablecoin holders optimize USDC yield between lending protocols in a rational, gas-aware, and transparent way.
+AutoYield Agent is a browser-based DApp that creates a dedicated Agent Wallet and helps retail stablecoin holders optimize USDC yield across **N lending protocols on multiple chains** in a rational, gas-aware, and transparent way.
 
-This MVP runs on testnet only.
+Phase 1 runs on Sepolia testnet. Phase 2 expands to Arbitrum, Optimism, and Base mainnet.
 
 ---
 
@@ -16,11 +16,13 @@ Retail users face two common problems:
 
 **Real APR data (historical 2023–2025):**
 
-| Protocol           | Typical APY | Range        |
-|--------------------|-------------|--------------|
-| Aave USDC          | 4.2%        | 2.1% – 11.8% |
-| Compound USDC      | 3.6%        | 1.5% – 9.3%  |
-| Delta (spread)     | 0.4%        | 0.1% – 2.1%  |
+| Protocol           | Typical APY | Range        | Chain    |
+|--------------------|-------------|--------------|----------|
+| Aave V3 USDC       | 4.2%        | 2.1% – 11.8% | Sepolia  |
+| Compound V3 USDC   | 3.6%        | 1.5% – 9.3%  | Sepolia  |
+| Radiant Capital    | 5.1%        | 2.0% – 13.0% | Arbitrum |
+| Morpho Blue        | 4.7%        | 1.8% – 12.5% | Base     |
+| Best–Worst spread  | 0.4–1.5%    | 0.1% – 3.5%  | —        |
 
 Gas per rotation on L2: $0.10 – $0.50
 
@@ -86,14 +88,17 @@ The decision engine has 4 layers.
 
 ## Layer 1 — Snapshot Comparison
 
-The system fetches:
+The system fetches APRs from **all enabled protocols** concurrently via the Protocol Adapter Registry:
 
-- Aave USDC APR
-- Compound USDC APR
+- Aave V3 (Sepolia — active)
+- Compound V3 (Sepolia — active)
+- Radiant Capital (Arbitrum — Phase 2)
+- Morpho Blue (Base — Phase 2)
 
 Compute:
 
-deltaPct = targetAPR - currentAPR
+bestAPR = max(all enabled protocol APRs)
+deltaPct = bestAPR - currentAPR
 
 If deltaPct <= 0 → NOOP.
 
@@ -245,20 +250,25 @@ AutoYield prevents exactly this mistake.
 
 Frontend:
 - Next.js DApp
+- Landing page (`/`)
+- DApp Dashboard (`/dapp`) — live APRs, decisions, approvals, rules, Telegram config
+- Admin Dashboard (`/admin`) — system stats, protocol/chain registry, execution log
 
 Backend:
 - Next.js API routes
-- JSON storage (rules, state, history)
+- JSON storage (rules, state, history, protocols)
+- Protocol Adapter Registry (`lib/protocols/`)
+- Chain Configuration Registry (`lib/chains/`)
 
 On-chain:
-- ethers.js
+- ethers.js v6
 - Agent Wallet signer
-- Aave and Compound contracts (testnet)
+- Protocol adapters: Aave V3, Compound V3 (Phase 1), Radiant, Morpho (Phase 2)
 
 Telegram:
-- Bot API
-- Inline approval buttons
-- Webhook handler
+- User-configurable bot token and chat ID via UI
+- Inline approval buttons (Approve / Reject)
+- Webhook handler (`/api/telegram/webhook`)
 
 ---
 
@@ -280,7 +290,9 @@ Future:
 
 # Roadmap
 
-- Multi-asset
-- Multi-chain
-- Volatility detection
-- Smart treasury mode
+| Phase | Status | Description |
+|-------|--------|-------------|
+| Phase 1 | Live | MVP on Sepolia. Aave + Compound. Full AI decision engine. Telegram alerts. |
+| Phase 2 | Planned | Mainnet: Arbitrum, Optimism, Base. Radiant, Morpho adapters. Multi-chain routing. |
+| Phase 3 | Planned | ML-based APR forecasting. Uniswap V3 LP strategies. Leveraged yield. |
+| Phase 4 | Planned | `$AYD` governance token. DAO-controlled parameters. Decentralized agent network. |

@@ -6,15 +6,6 @@
     },
     "best": "aave",
     "bestAPR": 4.2,
-    "timestamp": 1771920230706
-  },
-  {
-    "aprs": {
-      "aave": 4.2,
-      "compound": 3.6
-    },
-    "best": "aave",
-    "bestAPR": 4.2,
     "timestamp": 1771920230768
   },
   {
@@ -214,5 +205,14 @@
     "best": "aave",
     "bestAPR": 4.2,
     "timestamp": 1771929633971
+  },
+  {
+    "aprs": {
+      "aave": 4.2,
+      "compound": 3.6
+    },
+    "best": "aave",
+    "bestAPR": 4.2,
+    "timestamp": 1771939644460
   }
 ]

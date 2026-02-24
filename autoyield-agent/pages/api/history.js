@@ -1,7 +1,11 @@
 import fs from 'fs';
 import path from 'path';
+import { getSessionFromRequest } from '../../lib/auth.js';
+import { appendUserHistory, getUserHistory } from '../../lib/db.js';
 
 const HISTORY_FILE = path.join(process.cwd(), 'data', 'history.json');
+
+// ─── Global (admin/legacy) helpers ────────────────────────────────────────────
 
 export function readHistory() {
   try {
@@ -17,7 +21,23 @@ export function appendHistory(entry) {
   fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2));
 }
 
+// ─── Per-user helpers ─────────────────────────────────────────────────────────
+
+export function appendHistoryForUser(userId, entry) {
+  if (userId == null) return appendHistory(entry);
+  appendUserHistory(userId, entry);
+}
+
+export function readHistoryForUser(userId) {
+  if (userId == null) return readHistory();
+  return getUserHistory(userId);
+}
+
+// ─── API handler ──────────────────────────────────────────────────────────────
+
 export default function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
-  res.status(200).json(readHistory());
+  const session = getSessionFromRequest(req);
+  const userId = session?.userId ?? null;
+  res.status(200).json(readHistoryForUser(userId));
 }

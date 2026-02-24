@@ -1,9 +1,12 @@
 # AutoYield Agent DApp
-Retail DeFi Auto-Pilot with Capital-Aware Decision Engine — v2.0 Multi-Protocol
+Retail DeFi Auto-Pilot with Capital-Aware Decision Engine — v3.0 Multi-User
 
-AutoYield Agent is a browser-based DApp that creates a dedicated Agent Wallet and helps retail stablecoin holders optimize USDC yield across **N lending protocols on multiple chains** in a rational, gas-aware, and transparent way.
+AutoYield Agent is a browser-based DApp that creates a **dedicated Agent Wallet per user** and optimizes USDC yield across **N lending protocols on multiple chains** in a rational, gas-aware, and transparent way.
 
-Phase 1 runs on Sepolia testnet. Phase 2 expands to Arbitrum, Optimism, and Base mainnet.
+- **Multi-user:** Each user connects their wallet (MetaMask SIWE), gets a personal agent wallet, and has isolated state/rules/history stored in SQLite.
+- **24/7 automation:** Background scheduler checks all users every 5 minutes and executes rotations automatically (or sends Telegram approval requests).
+- **Phase 1:** Sepolia testnet — Aave V3 + Compound V3.
+- **Phase 2:** Mainnet — Arbitrum, Optimism, Base — Radiant, Morpho adapters.
 
 ---
 
@@ -198,21 +201,20 @@ This adds human-in-the-loop control for retail users.
 
 # User Flow
 
-1. Connect wallet
-2. View Agent Wallet address
-3. Transfer USDC to Agent Wallet
-4. Configure rules
-5. Click Run Check
-6. View:
+1. Open `/dapp` → click **Connect with MetaMask**
+2. Sign the SIWE challenge in MetaMask (no gas, off-chain signature)
+3. View your **Agent Wallet address** in the deposit banner
+4. Transfer USDC to your Agent Wallet (Sepolia faucet USDC for testnet)
+5. Configure rules (min delta, cooldown, execution mode, etc.)
+6. Click **Run Check** or wait for the 24/7 scheduler (every 5 min)
+7. View decision details:
    - APR values (live and EMA-smoothed)
-   - delta and momentum direction
-   - confidence score
-   - gas estimate
-   - projected annual gain vs expected gas cost
-   - decision + reasoning (plain language)
-7. Approve execution (UI or Telegram)
-8. View transaction hash
-9. View move history
+   - Delta and momentum direction
+   - Confidence score
+   - Gas estimate and projected annual gain
+   - Plain-language reason for ROTATE or NOOP
+8. Approve execution via UI button or **Telegram** inline button
+9. View transaction hashes and full move history
 
 ---
 
@@ -256,19 +258,23 @@ Frontend:
 
 Backend:
 - Next.js API routes
-- JSON storage (rules, state, history, protocols)
+- **SQLite** (`better-sqlite3`) — per-user data (state, rules, history, agent wallets, auth nonces)
+- JSON files — global/admin data (protocol config, credentials, APR history)
+- **SIWE-lite auth** — EIP-191 personal_sign + HMAC-SHA256 session tokens
+- **24/7 Scheduler** — `setInterval(5min)` started via Next.js instrumentation hook
 - Protocol Adapter Registry (`lib/protocols/`)
 - Chain Configuration Registry (`lib/chains/`)
 
 On-chain:
 - ethers.js v6
-- Agent Wallet signer
+- **Per-user agent wallets** — generated randomly, AES-256-CBC encrypted in DB
 - Protocol adapters: Aave V3, Compound V3 (Phase 1), Radiant, Morpho (Phase 2)
 
 Telegram:
 - User-configurable bot token and chat ID via UI
-- Inline approval buttons (Approve / Reject)
-- Webhook handler (`/api/telegram/webhook`)
+- Inline approval buttons (Approve / Reject) with 30-min expiry window
+- Webhook handler validates sender chatId and optional `TELEGRAM_WEBHOOK_SECRET`
+- `/api/telegram/webhook`
 
 ---
 

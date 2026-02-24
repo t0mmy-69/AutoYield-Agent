@@ -2,10 +2,10 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
+COPY autoyield-agent/package.json autoyield-agent/package-lock.json* ./
 RUN npm install
 
-COPY . .
+COPY autoyield-agent/ .
 
 RUN npm run build
 

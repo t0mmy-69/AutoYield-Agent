@@ -1,1 +1,5 @@
-{}
+{
+  "aave": {
+    "enabled": true
+  }
+}

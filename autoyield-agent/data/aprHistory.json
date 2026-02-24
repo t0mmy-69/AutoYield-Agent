@@ -70,5 +70,59 @@
     "compoundAPR": 3.6,
     "delta": 0.6,
     "timestamp": 1771862035386
+  },
+  {
+    "aprs": {
+      "aave": 4.2,
+      "compound": 3.6
+    },
+    "best": "aave",
+    "bestAPR": 4.2,
+    "timestamp": 1771896522232
+  },
+  {
+    "aprs": {
+      "aave": 4.2,
+      "compound": 3.6
+    },
+    "best": "aave",
+    "bestAPR": 4.2,
+    "timestamp": 1771896522255
+  },
+  {
+    "aprs": {
+      "aave": 4.2,
+      "compound": 3.6
+    },
+    "best": "aave",
+    "bestAPR": 4.2,
+    "timestamp": 1771896601809
+  },
+  {
+    "aprs": {
+      "aave": 4.2,
+      "compound": 3.6
+    },
+    "best": "aave",
+    "bestAPR": 4.2,
+    "timestamp": 1771896604536
+  },
+  {
+    "aprs": {
+      "aave": 4.2,
+      "compound": 3.6
+    },
+    "best": "aave",
+    "bestAPR": 4.2,
+    "timestamp": 1771898249271
+  },
+  {
+    "aprs": {
+      "aave": 4.2,
+      "compound": 3.6
+    },
+    "best": "aave",
+    "bestAPR": 4.2,
+    "timestamp": 1771898249294
   }
 ]

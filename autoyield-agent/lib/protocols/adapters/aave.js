@@ -1,5 +1,6 @@
 import { ethers } from 'ethers';
 import { getProvider, approveToken } from '../../agentWallet.js';
+import { getCredential } from '../../credentials.js';
 
 const POOL_ABI = [
   'function getReserveData(address asset) view returns (tuple(uint256 configuration, uint128 liquidityIndex, uint128 currentLiquidityRate, uint128 variableBorrowIndex, uint128 currentVariableBorrowRate, uint128 currentStableBorrowRate, uint40 lastUpdateTimestamp, uint16 id, address aTokenAddress, address stableDebtTokenAddress, address variableDebtTokenAddress, address interestRateStrategyAddress, uint128 accruedToTreasury, uint128 unbacked, uint128 isolationModeTotalDebt))',
@@ -22,14 +23,14 @@ export const aaveAdapter = {
   enabled: true,
 
   getContractAddress() {
-    return process.env.AAVE_POOL_ADDRESS;
+    return getCredential('AAVE_POOL_ADDRESS');
   },
 
   async getAPR() {
     try {
       const provider = getProvider();
       const pool = new ethers.Contract(this.getContractAddress(), POOL_ABI, provider);
-      const data = await pool.getReserveData(process.env.USDC_ADDRESS);
+      const data = await pool.getReserveData(getCredential('USDC_ADDRESS'));
       const rateRaw = BigInt(data.currentLiquidityRate.toString());
       const aprPct = Number((rateRaw * 10000n) / RAY) / 100;
       return parseFloat(aprPct.toFixed(4));

@@ -1,5 +1,6 @@
 import { ethers } from 'ethers';
 import { getProvider, approveToken } from '../../agentWallet.js';
+import { getCredential } from '../../credentials.js';
 
 const COMET_ABI = [
   'function getUtilization() view returns (uint256)',
@@ -26,7 +27,7 @@ export const compoundAdapter = {
   enabled: true,
 
   getContractAddress() {
-    return process.env.COMPOUND_COMET_ADDRESS;
+    return getCredential('COMPOUND_COMET_ADDRESS');
   },
 
   async getAPR() {

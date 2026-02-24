@@ -1,4 +1,5 @@
 import { ethers } from 'ethers';
+import { getCredential } from './credentials.js';
 
 const ERC20_ABI = [
   'function balanceOf(address owner) view returns (uint256)',
@@ -7,7 +8,7 @@ const ERC20_ABI = [
 ];
 
 export function getProvider() {
-  return new ethers.JsonRpcProvider(process.env.RPC_URL);
+  return new ethers.JsonRpcProvider(getCredential('RPC_URL'));
 }
 
 export function getSigner() {
@@ -17,7 +18,7 @@ export function getSigner() {
 
 export async function getUsdcBalance(address) {
   const provider = getProvider();
-  const usdc = new ethers.Contract(process.env.USDC_ADDRESS, ERC20_ABI, provider);
+  const usdc = new ethers.Contract(getCredential('USDC_ADDRESS'), ERC20_ABI, provider);
   const decimals = await usdc.decimals();
   const raw = await usdc.balanceOf(address);
   return parseFloat(ethers.formatUnits(raw, decimals));

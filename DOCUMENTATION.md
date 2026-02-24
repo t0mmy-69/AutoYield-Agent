@@ -3,7 +3,7 @@
 Welcome to the comprehensive system documentation for **AutoYield Agent**. This document serves as the master reference for the project's architecture, core modules, API surface, user interface, and integration points.
 
 > **Last updated:** 2026-02-24
-> **Version:** 3.0 — Multi-User, SQLite DB, SIWE Auth, 24/7 Scheduler
+> **Version:** 3.1 — Any-EVM Sign-In, Testnet Multi-Chain Deposits (ETH Sepolia · Base Sepolia · Arbitrum Sepolia)
 
 ---
 
@@ -98,11 +98,16 @@ The architecture is designed from the ground up for scale: adding a new protocol
 - **Auth:** SIWE-lite (EIP-191 personal_sign + HMAC-SHA256 session tokens)
 - **Blockchain:** ethers.js v6
 - **Notifications:** Telegram Bot API
-- **Network:** Sepolia Testnet (Phase 1)
+- **Networks (deposit):** Ethereum Sepolia · Base Sepolia · Arbitrum Sepolia (Phase 1 testnets)
+- **Sign-in:** Any EVM network (Polygon, Mainnet, Arbitrum, etc.) — no network switching required
 
 ---
 
 ## 3. Authentication & Multi-User
+
+### Any-EVM Sign-In
+
+The sign-in flow works with **any EVM-compatible network** — users do not need to switch to a specific network before connecting. Polygon, mainnet, testnet, Arbitrum, etc. are all accepted. The `personal_sign` call is chain-agnostic.
 
 ### SIWE-lite Flow
 
@@ -228,12 +233,22 @@ Chain configs live in `lib/chains/configs.js`.
 
 ### Registered Chains
 
-| ID | Name | Chain ID | Status | Phase |
+**Deposit-enabled (Phase 1 testnets):**
+
+| ID | Name | Chain ID | Status | Env Var Prefix |
 |---|---|---|---|---|
-| `sepolia` | Sepolia Testnet | 11155111 | Enabled | 1 |
-| `arbitrum` | Arbitrum One | 42161 | Disabled | 2 |
-| `optimism` | Optimism | 10 | Disabled | 2 |
-| `base` | Base | 8453 | Disabled | 2 |
+| `sepolia` | Ethereum Sepolia | 11155111 | **Enabled** | `RPC_URL` / `USDC_ADDRESS` |
+| `baseSepolia` | Base Sepolia | 84532 | **Enabled** | `BASE_SEPOLIA_RPC_URL` / `BASE_SEPOLIA_USDC_ADDRESS` |
+| `arbitrumSepolia` | Arbitrum Sepolia | 421614 | **Enabled** | `ARBITRUM_SEPOLIA_RPC_URL` / `ARBITRUM_SEPOLIA_USDC_ADDRESS` |
+
+**Mainnets (Phase 2 — disabled):**
+
+| ID | Name | Chain ID | Status |
+|---|---|---|---|
+| `ethereum` | Ethereum | 1 | Disabled |
+| `base` | Base | 8453 | Disabled |
+| `arbitrum` | Arbitrum One | 42161 | Disabled |
+| `optimism` | Optimism | 10 | Disabled |
 
 ### Adding a New Chain
 
@@ -575,26 +590,43 @@ AGENT_PRIVATE_KEY=0x...
 
 # ── Chain & Protocol Addresses (configurable via Admin UI) ───────────────────
 
-RPC_URL=https://...              # Sepolia RPC URL
-USDC_ADDRESS=0x...               # USDC contract on Sepolia
-AAVE_POOL_ADDRESS=0x...          # AAVE V3 Pool on Sepolia
-COMPOUND_COMET_ADDRESS=0x...     # Compound Comet on Sepolia
+
+# ── Testnet Chains (deposit-enabled, Phase 1) ─────────────────────────────────
+
+# Ethereum Sepolia
+RPC_URL=https://...                          # Sepolia RPC URL
+USDC_ADDRESS=0x...                            # USDC on Sepolia
+AAVE_POOL_ADDRESS=0x...                       # AAVE V3 Pool on Sepolia
+COMPOUND_COMET_ADDRESS=0x...                  # Compound Comet on Sepolia
+
+# Base Sepolia
+BASE_SEPOLIA_RPC_URL=https://...
+BASE_SEPOLIA_USDC_ADDRESS=0x...
+
+# Arbitrum Sepolia
+ARBITRUM_SEPOLIA_RPC_URL=https://...
+ARBITRUM_SEPOLIA_USDC_ADDRESS=0x...
 
 # Optional — Telegram integration
 TELEGRAM_BOT_TOKEN=...
 TELEGRAM_CHAT_ID=...
 
-# Phase 2 — Arbitrum (not yet active)
+# ── Mainnets (Phase 2 — disabled) ────────────────────────────────────────────
+# Ethereum mainnet
+ETHEREUM_RPC_URL=https://...
+ETHEREUM_USDC_ADDRESS=0x...
+
+# Arbitrum One mainnet
 ARBITRUM_RPC_URL=https://...
 ARBITRUM_USDC_ADDRESS=0x...
 RADIANT_POOL_ADDRESS=0x...
 
-# Phase 2 — Base (not yet active)
+# Base mainnet
 BASE_RPC_URL=https://...
 BASE_USDC_ADDRESS=0x...
 MORPHO_POOL_ADDRESS=0x...
 
-# Phase 2 — Optimism (not yet active)
+# Optimism mainnet
 OPTIMISM_RPC_URL=https://...
 OPTIMISM_USDC_ADDRESS=0x...
 ```
@@ -654,6 +686,32 @@ The SQLite database (`data/autoyield.db`) is created automatically on first run.
 ---
 
 ## 14. Changelog
+
+### 2026-02-24 — v3.1: Any-EVM Sign-In + Testnet Multi-Chain Deposits
+
+**Bug fix: "Signature does not match address" (`lib/auth.js`)**
+- `buildSignMessage()` previously included `Issued: ${new Date().toISOString()}` — this timestamp was generated at challenge creation time (T1) and again at verification time (T2), producing two different messages. `ethers.verifyMessage()` recovered the wrong address, causing auth to fail for wallets on any network (e.g. Polygon).
+- **Fix:** removed the `Issued:` line entirely. The nonce (random 16-byte hex, 5-min TTL) already provides replay protection.
+
+**Any-EVM sign-in**
+- Wallet connection and authentication now work from **any EVM-compatible network** — no network switching required. Polygon, Ethereum mainnet, testnets, Arbitrum, etc. are all accepted.
+
+**Multi-chain testnet deposits (`lib/chains/configs.js`)**
+- Added `baseSepolia` — Base Sepolia testnet (chain ID 84532). Env vars: `BASE_SEPOLIA_RPC_URL`, `BASE_SEPOLIA_USDC_ADDRESS`.
+- Added `arbitrumSepolia` — Arbitrum Sepolia testnet (chain ID 421614). Env vars: `ARBITRUM_SEPOLIA_RPC_URL`, `ARBITRUM_SEPOLIA_USDC_ADDRESS`.
+- Re-enabled `sepolia` (Ethereum Sepolia) as the primary testnet.
+- Added mainnet chain entries (`ethereum`, `base`, `arbitrum`, `optimism`) — all `enabled: false` for Phase 2.
+- Removed the old single-mainnet `ethereum` and mainnet `base`/`arbitrum` that had been temporarily enabled.
+
+**UI (`pages/dapp.js`)**
+- Network badge updated to `"Testnet · ETH · Base · Arbitrum"`
+- Deposit banner hint updated to `"← Deposit USDC here (Sepolia · Base Sepolia · Arbitrum Sepolia)"`
+- Connect card description updated: "Sign in with any EVM wallet. Deposits supported on Ethereum Sepolia, Base Sepolia, and Arbitrum Sepolia."
+
+**`lib/userWallet.js`**
+- Default `chainId` parameter on `createUserWallet`, `getUserSigner`, `getUserUsdcBalance`, `getProviderForChain` is `'sepolia'` (primary testnet).
+
+---
 
 ### 2026-02-24 — v3.0: Multi-User Foundation, SQLite DB, SIWE Auth, 24/7 Scheduler
 

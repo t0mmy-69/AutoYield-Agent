@@ -3,7 +3,7 @@ import path from 'path';
 import { aaveAdapter, createAaveAdapter } from './adapters/aave.js';
 import { compoundAdapter, createCompoundAdapter } from './adapters/compound.js';
 import { radiantAdapter } from './adapters/radiant.js';
-import { morphoAdapter } from './adapters/morpho.js';
+import { morphoAdapter, createMorphoAdapter } from './adapters/morpho.js';
 import { DATA_DIR } from '../dataPath.js';
 
 // Master registry of all built-in protocol adapters
@@ -13,6 +13,7 @@ const BUILTIN_ADAPTERS = [aaveAdapter, compoundAdapter, radiantAdapter, morphoAd
 const ADAPTER_FACTORIES = {
   aave: createAaveAdapter,
   compound: createCompoundAdapter,
+  morpho: createMorphoAdapter,
 };
 
 const CONFIG_FILE = path.join(DATA_DIR, 'protocols.json');
@@ -105,12 +106,15 @@ export function restoreProtocol(id) {
  * type: 'aave' | 'compound'
  * Returns the created adapter config or throws if invalid.
  */
-export function addCustomProtocol({ id, type, name, chain, contractAddress, usdcAddress, color }) {
+export function addCustomProtocol({ id, type, name, chain, contractAddress, usdcAddress, marketId, color }) {
   if (!id || !type || !name || !chain || !contractAddress) {
     throw new Error('Required: id, type, name, chain, contractAddress');
   }
   if (!ADAPTER_FACTORIES[type]) {
     throw new Error(`Unsupported protocol type: "${type}". Supported: ${Object.keys(ADAPTER_FACTORIES).join(', ')}`);
+  }
+  if (type === 'morpho' && !marketId) {
+    throw new Error('Morpho protocol requires a marketId (bytes32)');
   }
   const config = readConfig();
   if (config[id] && !config[id].deleted) {
@@ -128,6 +132,7 @@ export function addCustomProtocol({ id, type, name, chain, contractAddress, usdc
     chain,
     contractAddress,
     usdcAddress: usdcAddress || '',
+    ...(marketId ? { marketId } : {}),
     color: color || '#818cf8',
     enabled: true,
   };

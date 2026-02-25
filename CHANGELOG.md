@@ -1,5 +1,143 @@
 # AutoYield Agent — Changelog
 
+## [Unreleased] — APR Integrity, Custom Protocol Registry & Admin UI
+
+All fixes live on branch `claude/review-autoyield-spec-TLo9m`.
+
+---
+
+### Critical (fake on-chain data)
+
+#### 1. Fix AAVE APR always returning 0% on Sepolia
+**File:** `lib/protocols/adapters/aave.js`
+
+AAVE V3 Sepolia uses its own testnet USDC (`0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8`),
+not Circle's Sepolia USDC (`0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238`) used by Compound.
+Querying `getReserveData()` with the wrong token address returns `currentLiquidityRate = 0`,
+making APR appear as 0%.
+
+```diff
+- const usdcAddress = getCredential('USDC_ADDRESS');
++ const usdcAddress =
++   getCredential('AAVE_USDC_ADDRESS') ||
++   '0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8'; // AAVE Sepolia default
+```
+
+On mainnet both protocols use the same USDC (`0xA0b8...`), so `AAVE_USDC_ADDRESS` only
+needs to be set when running on a testnet where the addresses diverge.
+
+#### 2. Remove hardcoded fake APR fallbacks
+**Files:** `lib/protocols/adapters/aave.js`, `lib/protocols/adapters/compound.js`
+
+Catch blocks silently returned fabricated values (`4.20` / `3.60`) whenever the RPC
+call failed (wrong address, wrong chain, misconfigured credentials). The agent would
+continue making rotation decisions based on invented data.
+
+```diff
+  async getAPR() {
+    try {
+      ...
+    } catch (err) {
+      console.error('[AAVE getAPR error]', err?.message ?? err);
+-     return 4.20; // testnet fallback
++     return null; // never fake data — let UI show "APR unavailable"
+    }
+  },
+```
+
+`fetchAllAPRs()` now collects failed adapters into a separate `aprErrors` map instead
+of mixing them into the `aprs` map. Only protocols with a valid numeric APR participate
+in the best-protocol selection.
+
+---
+
+### New features
+
+#### 3. Custom protocol registry — add any AAVE/Compound instance at runtime
+**Files:** `lib/protocols/adapters/aave.js`, `lib/protocols/adapters/compound.js`,
+`lib/protocols/index.js`, `pages/api/protocols.js`
+
+Admin can register a new protocol instance (e.g. "AAVE V3 on Arbitrum") without
+writing code:
+
+- `createAaveAdapter(config)` / `createCompoundAdapter(config)` — factory functions
+  exported from each adapter file.
+- `addCustomProtocol({ id, type, name, chain, contractAddress, usdcAddress })` — stores
+  the entry in `data/protocols.json` and instantiates a live adapter on next registry read.
+- `POST /api/protocols` — API endpoint (admin-only) to call the above.
+
+```json
+// data/protocols.json entry created by the API
+"aave-arbitrum": {
+  "custom": true,
+  "type": "aave",
+  "id": "aave-arbitrum",
+  "name": "AAVE V3 (Arbitrum One)",
+  "chain": "arbitrum",
+  "contractAddress": "0x...",
+  "usdcAddress": "0x...",
+  "enabled": true
+}
+```
+
+#### 4. Chain-aware provider
+**File:** `lib/agentWallet.js`
+
+Added `getProviderForChain(chainId)` that resolves the correct RPC URL for any registered
+chain, falling back to the default Sepolia provider if the chain RPC is not configured.
+
+```js
+export function getProviderForChain(chainId) {
+  const chain = CHAINS[chainId];
+  if (!chain) return getProvider();
+  const rpcUrl = getCredential(chain.rpcEnvVar) || process.env[chain.rpcEnvVar];
+  if (!rpcUrl) return getProvider();
+  return new ethers.JsonRpcProvider(rpcUrl);
+}
+```
+
+---
+
+### Admin UI improvements
+
+#### 5. "Add Protocol" button and modal
+**File:** `components/ProtocolPanel.jsx`
+
+Protocol Registry now has a "+ Add Protocol" button (visible in admin mode) that opens
+a form modal with fields: Protocol Type, Display Name, Network, Contract Address,
+USDC Address for APR query. The Protocol ID is auto-generated from name + chain.
+Custom protocols are labelled with a `CUSTOM` tag in the table.
+
+#### 6. APR error display in Protocol Registry and Live APR Snapshot
+**Files:** `components/ProtocolPanel.jsx`, `pages/admin.js`
+
+- Protocol rows now show `⚠ N/A` (red, with error tooltip) when APR fetch failed,
+  instead of `—` which was ambiguous.
+- Live APR Snapshot section renders separate error cards (red border) for failed
+  protocols, showing the error reason.
+
+#### 7. AAVE_USDC_ADDRESS credential field
+**File:** `pages/admin.js`
+
+Added `USDC for APR Query` field to the AAVE V3 credential card with a placeholder
+showing the correct Sepolia default address, making the configuration discoverable.
+
+---
+
+## Files Changed (this batch)
+
+| File | Change |
+|---|---|
+| `lib/protocols/adapters/aave.js` | Fix USDC address; return null on error; add `createAaveAdapter` factory |
+| `lib/protocols/adapters/compound.js` | Return null on error; add `createCompoundAdapter` factory |
+| `lib/protocols/index.js` | Support custom protocol instances; `aprErrors` in `fetchAllAPRs` |
+| `lib/agentWallet.js` | Add `getProviderForChain(chainId)` |
+| `pages/api/protocols.js` | Add POST handler for custom protocol registration |
+| `components/ProtocolPanel.jsx` | APR error display; "Add Protocol" button + modal |
+| `pages/admin.js` | `AAVE_USDC_ADDRESS` credential; APR error cards; pass `aprErrors` to ProtocolPanel |
+
+---
+
 ## [Unreleased] — Security & Bug Fixes
 
 All fixes live on branch `claude/review-autoyield-spec-TLo9m`.

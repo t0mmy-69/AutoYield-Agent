@@ -37,6 +37,10 @@ USDC_ADDRESS=0x...                      # USDC on Sepolia
 
 # --- Protocol contracts (Sepolia) ---
 AAVE_POOL_ADDRESS=0x...
+# AAVE Sepolia uses its own test USDC (0x94a9...), different from Circle USDC (0x1c7D...)
+# used by Compound. Leave blank to use the built-in Sepolia default.
+# On mainnet both protocols share 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48.
+AAVE_USDC_ADDRESS=0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8
 COMPOUND_COMET_ADDRESS=0x...
 
 # --- Optional ---
@@ -95,6 +99,7 @@ npm run dev
 | PATCH | `/api/chains` | Enable/disable a chain |
 | DELETE | `/api/chains` | Remove a chain |
 | PATCH | `/api/protocols` | Enable/disable a protocol |
+| POST | `/api/protocols` | Register a new custom protocol instance (no code required) |
 | DELETE | `/api/protocols` | Remove a protocol |
 | GET | `/api/scheduler/status` | Scheduler runtime stats |
 | POST | `/api/cron` | Trigger decision cycle (also protected by `CRON_SECRET` if set) |
@@ -120,6 +125,7 @@ lib/
   auth.js              ← SIWE-lite auth, withAuth, withAdminAuth
   db.js                ← SQLite schema + all DB access functions
   userWallet.js        ← per-user agent wallet create/decrypt/balance
+  agentWallet.js       ← global provider, getProviderForChain(chainId)
   scheduler.js         ← 5-min global interval, runAllUsers / runCheckForUser
   decisionEngine.js    ← 6-step ROTATE/NOOP decision with confidence scoring
   executor.js          ← withdraw from source + supply to destination
@@ -128,15 +134,50 @@ lib/
   gasEstimator.js      ← gas cost in USD (CoinGecko + provider.getFeeData)
   credentials.js       ← runtime credential store (env → credentials.json)
   protocols/
-    index.js           ← protocol registry
+    index.js           ← protocol registry; supports custom runtime instances
     adapters/
-      aave.js          ← Aave V3 getAPR / supply / withdraw
-      compound.js      ← Compound V3 getAPR / supply / withdraw
+      aave.js          ← Aave V3 getAPR / supply / withdraw + createAaveAdapter factory
+      compound.js      ← Compound V3 getAPR / supply / withdraw + createCompoundAdapter factory
       radiant.js       ← Radiant (Phase 2)
       morpho.js        ← Morpho Blue (Phase 2)
   chains/
     configs.js         ← chain registry + enable/disable
 ```
+
+## Adding a custom protocol
+
+Admin can register a new AAVE V3 or Compound V3 instance on any chain without
+writing code. Use the **"+ Add Protocol"** button in the admin dashboard, or call the API
+directly:
+
+```bash
+curl -X POST /api/protocols \
+  -H "Content-Type: application/json" \
+  -H "x-admin-secret: YOUR_ADMIN_SECRET" \
+  -d '{
+    "type": "aave",
+    "id": "aave-arbitrum",
+    "name": "AAVE V3 (Arbitrum One)",
+    "chain": "arbitrum",
+    "contractAddress": "0xYourPoolAddress",
+    "usdcAddress": "0xYourUsdcAddress"
+  }'
+```
+
+The entry is saved to `data/protocols.json` and is immediately active — no restart required.
+To support a completely new protocol type, create an adapter in `lib/protocols/adapters/`
+and add it to `ALL_ADAPTERS` in `lib/protocols/index.js`.
+
+## APR data integrity
+
+- All adapters return `null` on error — **no fake fallback values**.
+- `fetchAllAPRs()` separates valid APRs (`aprs`) from failures (`aprErrors`).
+- Only protocols with a real numeric APR participate in rotation decisions.
+- The admin dashboard shows a red error card for any protocol where the APR fetch failed,
+  with the error reason displayed.
+- On Sepolia, AAVE uses `AAVE_USDC_ADDRESS` (default `0x94a9...`) while Compound uses
+  `USDC_ADDRESS` (`0x1c7D...`). On mainnet both use the same USDC, so only one address
+  is needed.
 
 ## Data files
 
@@ -146,7 +187,7 @@ All runtime state lives in `data/` (not committed):
 |------|----------|
 | `autoyield.db` | SQLite: users, wallets, rules, state, history, locks |
 | `credentials.json` | Runtime credential overrides (written by admin UI) |
-| `protocols.json` | Protocol enable/disable flags |
+| `protocols.json` | Protocol enable/disable flags + custom protocol instances |
 | `chains.json` | Chain enable/disable flags |
 | `aprHistory.json` | 24-snapshot APR rolling window |
 | `rules.json` | Global/legacy decision rules (per-user rules are in SQLite) |

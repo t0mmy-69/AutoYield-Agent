@@ -65,6 +65,7 @@ System continues operating in both cases — AI layer is entirely optional.
 | `components/RulesPanel.jsx` | Add AI textarea + generate button + preview + apply button |
 | `pages/dapp.js` | `aiExplanation` state; `handleAiGenerateRules` callback; wire props to panels |
 | `lib/credentials.js` | Add `ANTHROPIC_API_KEY` to credential schema |
+| `pages/admin.js` | Add "AI Integration" credential card (`type="password"`, description text, `autoComplete="off"`); add `description` + `secret` prop support to `CredentialCard` |
 
 ---
 

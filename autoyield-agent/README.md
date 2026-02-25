@@ -48,6 +48,10 @@ CRON_SECRET=<random>                    # Protects POST /api/cron from external 
 TELEGRAM_BOT_TOKEN=<token>             # Required for telegram_approval mode
 TELEGRAM_CHAT_ID=<chat id>
 TELEGRAM_WEBHOOK_SECRET=<random>        # Sent by Telegram in X-Telegram-Bot-Api-Secret-Token; set same value in setWebhook call
+
+ANTHROPIC_API_KEY=sk-ant-...           # Optional — enables AI Rules Builder + Decision Explainer
+                                        # Can also be set via Admin → API Credentials → AI Integration
+                                        # Without it, system uses deterministic fallback templates
 ```
 
 Generate secure secrets:

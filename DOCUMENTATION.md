@@ -632,6 +632,7 @@ The UI always renders and the system always operates in fallback mode.
 | `pages/api/ai/rules.js` | Feature A endpoint — rate-limited, validates output |
 | `pages/api/ai/explain.js` | Feature B endpoint — caches by decision ID |
 | `lib/db.js` → `ai_decision_cache` | Cache table: `decision_id`, `ui_text`, `telegram_text`, `admin_note` |
+| `pages/admin.js` → "AI Integration" section | Credential card for `ANTHROPIC_API_KEY` (`type="password"`, description, `autoComplete="off"`) at top of API Credentials |
 
 ---
 

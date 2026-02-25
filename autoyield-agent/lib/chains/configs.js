@@ -94,8 +94,9 @@ export const CHAINS = {
 
 import fs from 'fs';
 import path from 'path';
+import { DATA_DIR } from '../dataPath.js';
 
-const CHAINS_OVERRIDE_FILE = path.join(process.cwd(), 'data', 'chains.json');
+const CHAINS_OVERRIDE_FILE = path.join(DATA_DIR, 'chains.json');
 
 function readChainsOverride() {
   try {

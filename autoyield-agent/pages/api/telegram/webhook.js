@@ -7,8 +7,9 @@ import { getSigner, getUsdcBalance } from '../../../lib/agentWallet.js';
 import { getUserSigner, getUserUsdcBalance } from '../../../lib/userWallet.js';
 import { isTelegramCallbackProcessed, markTelegramCallbackProcessed } from '../../../lib/db.js';
 import { executeApproval } from '../approve.js';
+import { DATA_DIR } from '../../../lib/dataPath.js';
 
-const CONFIG_PATH = path.join(process.cwd(), 'data', 'telegram.json');
+const CONFIG_PATH = path.join(DATA_DIR, 'telegram.json');
 
 function getTelegramChatId() {
   try {

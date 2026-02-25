@@ -1,7 +1,8 @@
 import fs from 'fs';
 import path from 'path';
+import { DATA_DIR } from '../../../lib/dataPath.js';
 
-const CONFIG_PATH = path.join(process.cwd(), 'data', 'telegram.json');
+const CONFIG_PATH = path.join(DATA_DIR, 'telegram.json');
 
 function readConfig() {
   try {

@@ -23,7 +23,8 @@ export const aaveAdapter = {
   enabled: true,
 
   getContractAddress() {
-    return getCredential('AAVE_POOL_ADDRESS');
+    // Default: official Aave V3 Pool on Sepolia
+    return getCredential('AAVE_POOL_ADDRESS') || '0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951';
   },
 
   async getAPR() {

@@ -4,12 +4,13 @@ import { aaveAdapter } from './adapters/aave.js';
 import { compoundAdapter } from './adapters/compound.js';
 import { radiantAdapter } from './adapters/radiant.js';
 import { morphoAdapter } from './adapters/morpho.js';
+import { DATA_DIR } from '../dataPath.js';
 
 // Master registry of all known protocol adapters
 // To add a new protocol: create an adapter in ./adapters/, import it here, add to ALL_ADAPTERS
 const ALL_ADAPTERS = [aaveAdapter, compoundAdapter, radiantAdapter, morphoAdapter];
 
-const CONFIG_FILE = path.join(process.cwd(), 'data', 'protocols.json');
+const CONFIG_FILE = path.join(DATA_DIR, 'protocols.json');
 
 function readConfig() {
   try {

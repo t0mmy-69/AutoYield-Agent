@@ -1,7 +1,8 @@
 import fs from 'fs';
 import path from 'path';
+import { DATA_DIR } from './dataPath.js';
 
-const HISTORY_FILE = path.join(process.cwd(), 'data', 'aprHistory.json');
+const HISTORY_FILE = path.join(DATA_DIR, 'aprHistory.json');
 const MAX_SNAPSHOTS = 24; // increased window for multi-protocol tracking
 
 export function getHistory() {

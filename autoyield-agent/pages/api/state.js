@@ -4,8 +4,9 @@ import { getSessionFromRequest } from '../../lib/auth.js';
 import { getUserState, setUserState, getAgentWallet } from '../../lib/db.js';
 import { getUserUsdcBalance } from '../../lib/userWallet.js';
 import { getSigner, getUsdcBalance } from '../../lib/agentWallet.js';
+import { DATA_DIR } from '../../lib/dataPath.js';
 
-const STATE_FILE = path.join(process.cwd(), 'data', 'state.json');
+const STATE_FILE = path.join(DATA_DIR, 'state.json');
 
 // ─── Global (admin/legacy) helpers ────────────────────────────────────────────
 
@@ -56,9 +57,15 @@ export default async function handler(req, res) {
 
     // Legacy global state (admin / single-user mode)
     const state = readState();
-    const signer = getSigner();
-    const agentAddress = await signer.getAddress();
-    const usdcBalance = await getUsdcBalance(agentAddress);
+    let agentAddress = null;
+    let usdcBalance = 0;
+    if (process.env.AGENT_PRIVATE_KEY) {
+      try {
+        const signer = getSigner();
+        agentAddress = await signer.getAddress();
+        usdcBalance = await getUsdcBalance(agentAddress);
+      } catch { /* RPC or key misconfigured */ }
+    }
     res.status(200).json({ ...state, agentAddress, usdcBalance });
   } catch (err) {
     res.status(500).json({ error: err.message });

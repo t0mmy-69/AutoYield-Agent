@@ -29,7 +29,8 @@ export const compoundAdapter = {
   enabled: true,
 
   getContractAddress() {
-    return getCredential('COMPOUND_COMET_ADDRESS');
+    // Default: official Compound V3 cUSDCv3 Comet on Sepolia
+    return getCredential('COMPOUND_COMET_ADDRESS') || '0xAec1F48e02Cfb822Be958b68C7957156EB3F0b6e';
   },
 
   async getAPR() {
@@ -39,8 +40,11 @@ export const compoundAdapter = {
       const utilization = await comet.getUtilization();
       const supplyRatePerSec = await comet.getSupplyRate(utilization);
       const annualRate = Number(BigInt(supplyRatePerSec.toString()) * SECONDS_PER_YEAR) / 1e18;
-      return parseFloat((annualRate * 100).toFixed(4));
-    } catch {
+      const result = parseFloat((annualRate * 100).toFixed(4));
+      console.log('[Compound getAPR]', { utilization: utilization.toString(), supplyRatePerSec: supplyRatePerSec.toString(), result });
+      return result;
+    } catch (err) {
+      console.error('[Compound getAPR error]', err?.message ?? err);
       return 3.60; // testnet fallback
     }
   },

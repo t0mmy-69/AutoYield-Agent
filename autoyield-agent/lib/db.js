@@ -5,8 +5,9 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
+import { DATA_DIR } from './dataPath.js';
 
-const DB_PATH = path.join(process.cwd(), 'data', 'autoyield.db');
+const DB_PATH = path.join(DATA_DIR, 'autoyield.db');
 
 // Default rules template
 const DEFAULT_RULES = {

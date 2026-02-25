@@ -1,4 +1,5 @@
 import { fetchAllAPRs } from '../../lib/aprFetcher.js';
+import { startScheduler } from '../../lib/scheduler.js';
 import { appendSnapshot, getHistory } from '../../lib/aprHistory.js';
 import { runDecisionEngine } from '../../lib/decisionEngine.js';
 import { estimateGasCostUsd } from '../../lib/gasEstimator.js';
@@ -20,6 +21,9 @@ function isRateLimited(key) {
   rateLimitMap.set(key, Date.now());
   return false;
 }
+
+// Ensure the background scheduler is running (idempotent — safe to call on every request)
+startScheduler();
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();

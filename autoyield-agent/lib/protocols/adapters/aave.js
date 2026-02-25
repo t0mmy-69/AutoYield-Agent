@@ -1,5 +1,5 @@
 import { ethers } from 'ethers';
-import { getProvider, approveToken } from '../../agentWallet.js';
+import { getProvider, getProviderForChain, approveToken } from '../../agentWallet.js';
 import { getCredential } from '../../credentials.js';
 
 const POOL_ABI = [
@@ -49,7 +49,7 @@ export function createAaveAdapter(config) {
 
     async getAPR() {
       try {
-        const provider = getProvider();
+        const provider = getProviderForChain(chain);
         return await computeAaveAPR(contractAddress, usdcAddress, provider);
       } catch (err) {
         console.error(`[AAVE custom adapter ${id} getAPR error]`, err?.message ?? err);

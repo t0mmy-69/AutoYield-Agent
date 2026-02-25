@@ -1,5 +1,5 @@
 import { ethers } from 'ethers';
-import { getProvider, approveToken } from '../../agentWallet.js';
+import { getProvider, getProviderForChain, approveToken } from '../../agentWallet.js';
 import { getCredential } from '../../credentials.js';
 
 // Morpho Blue core — same address across all EVM chains (CREATE2 deterministic)
@@ -88,7 +88,7 @@ export function createMorphoAdapter(config) {
 
     async getAPR() {
       try {
-        const provider = getProvider();
+        const provider = getProviderForChain(chain);
         return await computeMorphoAPR(contractAddress, marketId, provider);
       } catch (err) {
         console.error(`[Morpho custom adapter ${id} getAPR error]`, err?.message ?? err);

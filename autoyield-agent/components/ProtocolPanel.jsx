@@ -218,6 +218,7 @@ function AddProtocolModal({ onClose, onAdded, adminFetch = fetch }) {
     chain: 'sepolia',
     contractAddress: '',
     usdcAddress: '',
+    marketId: '',
     color: '#818cf8',
   });
   const [saving, setSaving] = useState(false);
@@ -236,10 +237,13 @@ function AddProtocolModal({ onClose, onAdded, adminFetch = fetch }) {
     }
     setSaving(true);
     try {
+      const payload = { ...form, id: generatedId };
+      if (form.type !== 'morpho') delete payload.marketId;
+      if (form.type === 'morpho') delete payload.usdcAddress;
       const res = await adminFetch('/api/protocols', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, id: generatedId }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -267,6 +271,7 @@ function AddProtocolModal({ onClose, onAdded, adminFetch = fetch }) {
             <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))} style={modalStyles.select}>
               <option value="aave">AAVE V3</option>
               <option value="compound">Compound V3</option>
+              <option value="morpho">Morpho Blue</option>
             </select>
           </div>
 
@@ -306,16 +311,30 @@ function AddProtocolModal({ onClose, onAdded, adminFetch = fetch }) {
             />
           </div>
 
-          <div style={modalStyles.row}>
-            <label style={modalStyles.label}>USDC Address (for APR query)</label>
-            <input
-              type="text" value={form.usdcAddress}
-              onChange={e => setForm(f => ({ ...f, usdcAddress: e.target.value }))}
-              placeholder="0x... (leave blank to use chain default)"
-              style={modalStyles.input}
-              spellCheck={false}
-            />
-          </div>
+          {form.type === 'morpho' ? (
+            <div style={modalStyles.row}>
+              <label style={modalStyles.label}>Market ID (bytes32)</label>
+              <input
+                type="text" value={form.marketId}
+                onChange={e => setForm(f => ({ ...f, marketId: e.target.value }))}
+                placeholder="0x... (keccak256 of market params)"
+                style={modalStyles.input}
+                spellCheck={false}
+                required
+              />
+            </div>
+          ) : (
+            <div style={modalStyles.row}>
+              <label style={modalStyles.label}>USDC Address (for APR query)</label>
+              <input
+                type="text" value={form.usdcAddress}
+                onChange={e => setForm(f => ({ ...f, usdcAddress: e.target.value }))}
+                placeholder="0x... (leave blank to use chain default)"
+                style={modalStyles.input}
+                spellCheck={false}
+              />
+            </div>
+          )}
 
           {generatedId && (
             <div style={{ fontSize: '0.78rem', color: '#64748b' }}>

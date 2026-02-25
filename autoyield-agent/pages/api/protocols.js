@@ -20,9 +20,9 @@ function handler(req, res) {
 
   if (req.method === 'POST') {
     // Register a new custom protocol instance
-    const { id, type, name, chain, contractAddress, usdcAddress, color } = req.body || {};
+    const { id, type, name, chain, contractAddress, usdcAddress, marketId, color } = req.body || {};
     try {
-      const entry = addCustomProtocol({ id, type, name, chain, contractAddress, usdcAddress, color });
+      const entry = addCustomProtocol({ id, type, name, chain, contractAddress, usdcAddress, marketId, color });
       return res.status(201).json({ success: true, protocol: entry });
     } catch (err) {
       return res.status(400).json({ error: err.message });

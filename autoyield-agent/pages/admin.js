@@ -368,7 +368,7 @@ export default function AdminDashboard() {
           <h2 style={styles.sectionTitle}>Protocol Registry</h2>
           <p style={styles.sectionDesc}>Enable or disable protocols. Disabled protocols are excluded from all APR comparisons and rotation decisions.</p>
         </div>
-        <ProtocolPanel aprs={aprData?.aprs || {}} aprErrors={aprData?.aprErrors || {}} showToggle={true} />
+        <ProtocolPanel aprs={aprData?.aprs || {}} aprErrors={aprData?.aprErrors || {}} showToggle={true} adminFetch={adminFetch} />
       </section>
 
       {/* Chain Registry */}

@@ -1,5 +1,5 @@
 import { ethers } from 'ethers';
-import { getProvider, approveToken } from '../../agentWallet.js';
+import { getProvider, getProviderForChain, approveToken } from '../../agentWallet.js';
 import { getCredential } from '../../credentials.js';
 
 const COMET_ABI = [
@@ -51,7 +51,7 @@ export function createCompoundAdapter(config) {
 
     async getAPR() {
       try {
-        const provider = getProvider();
+        const provider = getProviderForChain(chain);
         return await computeCompoundAPR(contractAddress, provider);
       } catch (err) {
         console.error(`[Compound custom adapter ${id} getAPR error]`, err?.message ?? err);

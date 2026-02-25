@@ -1,5 +1,103 @@
 # AutoYield Agent — Changelog
 
+## [Unreleased] — Morpho Blue Adapter, Multi-Chain APR Provider, Telegram Webhook, Scheduler Auto-Start
+
+All changes live on branch `claude/review-autoyield-spec-TLo9m`.
+
+---
+
+### New features
+
+#### 1. Morpho Blue adapter — full implementation
+**File:** `lib/protocols/adapters/morpho.js`
+
+Replaced the Phase 2 stub with a working implementation.
+
+- `computeMorphoAPR(morphoAddress, marketId, provider)` — fetches market state via `market(bytes32)` and `idToMarketParams(bytes32)`, calls `irm.borrowRate()` on the AdaptiveCurveIRM, and computes supply APR:
+  ```
+  borrowAPR   = borrowRatePerSec × 31536000          (WAD)
+  utilization = totalBorrowAssets × WAD / totalSupplyAssets
+  supplyAPR   = borrowAPR × utilization / WAD × (WAD − fee) / WAD
+  ```
+- `createMorphoAdapter(config)` — factory for custom Morpho Blue instances. Requires `marketId` (bytes32). Implements `getAPR()`, `supply()`, and `withdraw()`.
+- `morphoAdapter` — built-in placeholder, `enabled: false`. Returns null for APR until user adds a live market via the custom registry.
+
+#### 2. Custom Morpho Blue protocol registration
+**Files:** `lib/protocols/index.js`, `pages/api/protocols.js`, `components/ProtocolPanel.jsx`
+
+- `ADAPTER_FACTORIES` now includes `morpho: createMorphoAdapter`.
+- `addCustomProtocol()` accepts a `marketId` parameter and throws if it is missing when `type === 'morpho'`.
+- `POST /api/protocols` passes `marketId` from request body.
+- `ProtocolPanel.jsx` — "Add Protocol" modal now has **Morpho Blue** in the type dropdown. When selected, shows a **Market ID (bytes32)** field instead of the USDC Address field.
+
+Market ID = `keccak256(abi.encode(loanToken, collateralToken, oracle, irm, lltv))`. Can be found on [app.morpho.org](https://app.morpho.org) or via the Morpho Blue GraphQL API (`https://blue-api.morpho.org/graphql`).
+
+---
+
+### Bug fixes
+
+#### 3. Multi-chain provider for custom adapter factories
+**Files:** `lib/protocols/adapters/aave.js`, `lib/protocols/adapters/compound.js`, `lib/protocols/adapters/morpho.js`
+
+`createAaveAdapter`, `createCompoundAdapter`, and `createMorphoAdapter` all called `getProvider()` (Sepolia global RPC) for APR queries regardless of the adapter's `chain` field. A custom AAVE instance on Arbitrum would query Sepolia's RPC and fail silently.
+
+```diff
+  async getAPR() {
+    try {
+-     const provider = getProvider();
++     const provider = getProviderForChain(chain);
+      ...
+    }
+  }
+```
+
+The built-in `aaveAdapter` / `compoundAdapter` singletons (hardcoded to Sepolia) are unchanged.
+
+#### 4. Telegram approval mode was non-functional — no webhook handler
+**New file:** `pages/api/telegram.js`
+**Modified:** `lib/telegramBot.js`
+
+`sendApprovalMessage()` sent messages with Approve/Reject buttons but there was no endpoint to receive callback queries when users tapped them. `telegram_approval` mode was therefore completely broken.
+
+- `lib/telegramBot.js` — callback_data format changed from `approve_${id}` to `approve|${userId}|${id}` (pipe-separated, userId embedded so the webhook can resolve the correct user state).
+- `pages/api/telegram.js` — new webhook handler:
+  - Verifies `X-Telegram-Bot-Api-Secret-Token` header against `TELEGRAM_WEBHOOK_SECRET` env var (optional but recommended)
+  - Deduplicates via `isTelegramCallbackProcessed` / `markTelegramCallbackProcessed` in DB (prevents double-execution on Telegram retries)
+  - Parses `{action}|{userId}|{decisionId}` from callback_data
+  - Validates decision ID against `state.pendingApproval.id` and checks 30-min expiry
+  - On approve: calls `executeApproval()`, answers callback query with TX hash
+  - On reject: records NOOP in history, clears pending state
+
+#### 5. Scheduler never started without external cron trigger
+**File:** `pages/api/check.js`
+
+`instrumentation.js` starts the scheduler on boot but only runs in full server mode. On cold starts or dev hot-reloads, the scheduler was not running (`/api/health` reported `scheduler: stopped`).
+
+```js
+// Module-level — runs once per process, idempotent (global flag guard in startScheduler)
+startScheduler();
+```
+
+This is a secondary safety net. Primary startup remains `instrumentation.js`.
+
+---
+
+### Files Changed
+
+| File | Change |
+|---|---|
+| `lib/protocols/adapters/morpho.js` | Full implementation: `computeMorphoAPR`, `createMorphoAdapter`, `morphoAdapter` placeholder |
+| `lib/protocols/adapters/aave.js` | `createAaveAdapter` uses `getProviderForChain(chain)` |
+| `lib/protocols/adapters/compound.js` | `createCompoundAdapter` uses `getProviderForChain(chain)` |
+| `lib/protocols/index.js` | `createMorphoAdapter` in `ADAPTER_FACTORIES`; `marketId` validated and stored in `addCustomProtocol` |
+| `pages/api/protocols.js` | Pass `marketId` through POST handler |
+| `lib/telegramBot.js` | Embed userId in callback_data: `approve\|{uid}\|{id}` |
+| `pages/api/telegram.js` | **New** — Telegram webhook handler |
+| `pages/api/check.js` | Auto-start scheduler at module load (secondary safety net) |
+| `components/ProtocolPanel.jsx` | Morpho Blue option in type dropdown; Market ID (bytes32) field |
+
+---
+
 ## [Unreleased] — APR Integrity, Custom Protocol Registry & Admin UI
 
 All fixes live on branch `claude/review-autoyield-spec-TLo9m`.

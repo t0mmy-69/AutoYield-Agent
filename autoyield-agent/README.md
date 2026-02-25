@@ -47,6 +47,7 @@ COMPOUND_COMET_ADDRESS=0x...
 CRON_SECRET=<random>                    # Protects POST /api/cron from external callers
 TELEGRAM_BOT_TOKEN=<token>             # Required for telegram_approval mode
 TELEGRAM_CHAT_ID=<chat id>
+TELEGRAM_WEBHOOK_SECRET=<random>        # Sent by Telegram in X-Telegram-Bot-Api-Secret-Token; set same value in setWebhook call
 ```
 
 Generate secure secrets:
@@ -69,6 +70,7 @@ npm run dev
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/api/health` | System health (DB + scheduler). Returns 503 if degraded. |
+| POST | `/api/telegram` | Telegram webhook — receives Approve/Reject button callbacks |
 | GET | `/api/apr` | Current APR snapshot from all enabled protocols |
 | GET | `/api/protocols` | Protocol registry |
 | GET | `/api/chains` | Chain registry |
@@ -139,18 +141,19 @@ lib/
       aave.js          ← Aave V3 getAPR / supply / withdraw + createAaveAdapter factory
       compound.js      ← Compound V3 getAPR / supply / withdraw + createCompoundAdapter factory
       radiant.js       ← Radiant (Phase 2)
-      morpho.js        ← Morpho Blue (Phase 2)
+      morpho.js        ← Morpho Blue: computeMorphoAPR, createMorphoAdapter factory (requires marketId)
   chains/
     configs.js         ← chain registry + enable/disable
 ```
 
 ## Adding a custom protocol
 
-Admin can register a new AAVE V3 or Compound V3 instance on any chain without
+Admin can register a new AAVE V3, Compound V3, or Morpho Blue market on any chain without
 writing code. Use the **"+ Add Protocol"** button in the admin dashboard, or call the API
 directly:
 
 ```bash
+# AAVE V3 on Arbitrum
 curl -X POST /api/protocols \
   -H "Content-Type: application/json" \
   -H "x-admin-secret: YOUR_ADMIN_SECRET" \
@@ -161,6 +164,19 @@ curl -X POST /api/protocols \
     "chain": "arbitrum",
     "contractAddress": "0xYourPoolAddress",
     "usdcAddress": "0xYourUsdcAddress"
+  }'
+
+# Morpho Blue market (marketId = keccak256(abi.encode(loanToken, collateralToken, oracle, irm, lltv)))
+curl -X POST /api/protocols \
+  -H "Content-Type: application/json" \
+  -H "x-admin-secret: YOUR_ADMIN_SECRET" \
+  -d '{
+    "type": "morpho",
+    "id": "morpho-usdc-eth",
+    "name": "Morpho USDC/wstETH",
+    "chain": "ethereum",
+    "contractAddress": "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
+    "marketId": "0xb323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc"
   }'
 ```
 

@@ -24,9 +24,12 @@ export async function sendApprovalMessage(decision) {
     return;
   }
 
-  const { from, to, deltaPct, emaDelta, gasCostUsd, projectedAnnualGain, confidenceScore, id } = decision;
+  const { from, to, deltaPct, emaDelta, gasCostUsd, projectedAnnualGain, confidenceScore, id, userId } = decision;
   const fromLabel = from?.toUpperCase() || '?';
   const toLabel = to?.toUpperCase() || '?';
+  // Encode userId so the webhook can resolve which user's state to update.
+  // Format: "approve|{userId}|{decisionId}" — pipe-separated to avoid ambiguity with underscores.
+  const uid = userId != null ? String(userId) : 'null';
 
   const text =
     `🤖 *AutoYield Decision: ROTATE*\n\n` +
@@ -39,8 +42,8 @@ export async function sendApprovalMessage(decision) {
 
   const keyboard = {
     inline_keyboard: [[
-      { text: '✅ Approve', callback_data: `approve_${id}` },
-      { text: '❌ Reject', callback_data: `reject_${id}` },
+      { text: '✅ Approve', callback_data: `approve|${uid}|${id}` },
+      { text: '❌ Reject', callback_data: `reject|${uid}|${id}` },
     ]],
   };
 

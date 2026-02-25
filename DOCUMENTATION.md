@@ -206,7 +206,21 @@ Every adapter in `lib/protocols/adapters/` must implement:
 | `aave` | AAVE V3 | Sepolia | Active (Phase 1) | `adapters/aave.js` |
 | `compound` | Compound V3 | Sepolia | Active (Phase 1) | `adapters/compound.js` |
 | `radiant` | Radiant Capital | Arbitrum | Inactive (Phase 2) | `adapters/radiant.js` |
-| `morpho` | Morpho Blue | Base | Inactive (Phase 2) | `adapters/morpho.js` |
+| `morpho` | Morpho Blue | any EVM | Factory ready — add market via Admin UI | `adapters/morpho.js` |
+
+The built-in `morpho` adapter is `enabled: false` (placeholder). To use Morpho Blue, register a custom instance via Admin → "+ Add Protocol" (type `morpho`) with a specific `marketId` (bytes32 = `keccak256(abi.encode(MarketParams))`).
+
+### Custom Adapter Factories
+
+All three live protocol types expose factory functions for runtime-registered instances:
+
+| Factory | Required config fields | APR source |
+|---|---|---|
+| `createAaveAdapter(config)` | `contractAddress`, `usdcAddress` | `Pool.getReserveData().currentLiquidityRate` |
+| `createCompoundAdapter(config)` | `contractAddress` | `Comet.getSupplyRate(getUtilization())` |
+| `createMorphoAdapter(config)` | `contractAddress`, `marketId` | `IRM.borrowRate()` × utilization × (1 − fee) |
+
+All factory instances call `getProviderForChain(chain)` — each adapter queries its own chain's RPC.
 
 ### Adding a New Protocol
 
@@ -388,7 +402,11 @@ Sends approval messages with inline Approve/Reject buttons. Handles callback que
 
 ### Overview
 
-The scheduler runs the decision engine for every registered user every **5 minutes**, automatically. It starts on server boot via the Next.js instrumentation hook.
+The scheduler runs the decision engine for every registered user every **5 minutes**, automatically.
+
+**Startup:** `startScheduler()` is called from two places (both are idempotent — a global flag ensures it starts only once per process):
+1. **Primary:** `instrumentation.js` — Next.js boot hook, runs on server start in production.
+2. **Secondary safety net:** `pages/api/check.js` module-level call — ensures the scheduler is running even on dev hot-reloads or cold starts before `instrumentation.js` fires.
 
 ### Files
 
@@ -396,7 +414,8 @@ The scheduler runs the decision engine for every registered user every **5 minut
 |---|---|
 | `lib/scheduler.js` | Core scheduler logic |
 | `pages/api/cron.js` | HTTP endpoint for external cron triggers |
-| `instrumentation.js` | Next.js boot hook: calls `startScheduler()` |
+| `pages/api/check.js` | Also calls `startScheduler()` at module load (secondary fallback) |
+| `instrumentation.js` | Next.js boot hook: calls `startScheduler()` (primary) |
 | `next.config.mjs` | `experimental.instrumentationHook: true` |
 
 ### How It Works
@@ -503,7 +522,9 @@ All state/rules/history endpoints detect the `Authorization: Bearer` header auto
 | `GET/PUT/DELETE` | `/api/telegram/config` | Manage bot token and chat ID |
 | `GET` | `/api/telegram/status` | Check Telegram config and webhook URL |
 | `POST` | `/api/telegram/test` | Send test message |
-| `POST` | `/api/telegram/webhook` | Receive callback queries (approve/reject). Validates `x-telegram-bot-api-secret-token` header and sender chatId |
+| `POST` | `/api/telegram` | Receive callback queries (approve/reject). Validates `X-Telegram-Bot-Api-Secret-Token` header, deduplicates via DB, resolves per-user state from embedded userId in callback_data |
+
+> **Setup:** register this URL as your Telegram webhook — `https://<your-domain>/api/telegram` — and set `TELEGRAM_WEBHOOK_SECRET` to the same secret token passed to Telegram's `setWebhook` API call.
 
 ---
 
@@ -594,6 +615,7 @@ Per-user data. Handles multi-user, concurrency-safe (WAL mode), and persists acr
 | `user_history` | `user_id`, `action`, `details` (JSON), `executed_at` | Per-user execution history |
 | `auth_nonces` | `address`, `nonce`, `expires_at` | One-time sign challenges (5-min TTL) |
 | `scheduler_lock` | `user_id`, `locked_at` | Prevents overlapping scheduler runs per user |
+| `telegram_callbacks` | `callback_id`, `processed_at` | Processed Telegram `callback_query_id` values — prevents double-execution when Telegram retries webhook delivery |
 
 ### JSON Files (`data/`)
 

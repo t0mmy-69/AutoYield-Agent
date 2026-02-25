@@ -29,7 +29,8 @@ export const compoundAdapter = {
   enabled: true,
 
   getContractAddress() {
-    return getCredential('COMPOUND_COMET_ADDRESS');
+    // Default: official Compound V3 cUSDCv3 Comet on Sepolia
+    return getCredential('COMPOUND_COMET_ADDRESS') || '0xAec1F48e02Cfb822Be958b68C7957156EB3F0b6e';
   },
 
   async getAPR() {

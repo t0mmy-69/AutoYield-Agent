@@ -18,6 +18,67 @@ const ERC20_ABI = [
 
 const SECONDS_PER_YEAR = 31536000n;
 
+/**
+ * Shared APR calculation — used by both the static adapter and custom factory instances.
+ * Returns the supply APR as a percentage (e.g. 3.60), or null if the call fails.
+ */
+export async function computeCompoundAPR(cometAddress, provider) {
+  const comet = new ethers.Contract(cometAddress, COMET_ABI, provider);
+  const utilization = await comet.getUtilization();
+  const supplyRatePerSec = await comet.getSupplyRate(utilization);
+  const annualRate = Number(BigInt(supplyRatePerSec.toString()) * SECONDS_PER_YEAR) / 1e18;
+  return parseFloat((annualRate * 100).toFixed(4));
+}
+
+/**
+ * Factory — create a fully-functional Compound adapter from a custom config.
+ * Used by the protocol registry for admin-registered protocol instances.
+ */
+export function createCompoundAdapter(config) {
+  const {
+    id, name, chain, color = '#00D395', website = 'https://compound.finance',
+    description = 'Algorithmic, autonomous interest rate protocol',
+    contractAddress, enabled = true,
+  } = config;
+
+  return {
+    id, name, chain, color, website, description,
+    category: 'lending',
+    enabled,
+    custom: true,
+
+    getContractAddress() { return contractAddress; },
+
+    async getAPR() {
+      try {
+        const provider = getProvider();
+        return await computeCompoundAPR(contractAddress, provider);
+      } catch (err) {
+        console.error(`[Compound custom adapter ${id} getAPR error]`, err?.message ?? err);
+        return null;
+      }
+    },
+
+    async supply({ signer, usdcAddress, amount }) {
+      const erc20 = new ethers.Contract(usdcAddress, ERC20_ABI, signer);
+      const decimals = await erc20.decimals();
+      await approveToken(usdcAddress, contractAddress, ethers.formatUnits(amount, decimals), signer);
+      const comet = new ethers.Contract(contractAddress, COMET_ABI, signer);
+      const tx = await comet.supply(usdcAddress, amount);
+      return await tx.wait();
+    },
+
+    async withdraw({ signer, usdcAddress }) {
+      const agentAddress = await signer.getAddress();
+      const comet = new ethers.Contract(contractAddress, COMET_ABI, signer);
+      const position = await comet.balanceOf(agentAddress);
+      if (position === 0n) throw new Error('Compound: no supply position to withdraw');
+      const tx = await comet.withdraw(usdcAddress, position);
+      return await tx.wait();
+    },
+  };
+}
+
 export const compoundAdapter = {
   id: 'compound',
   name: 'Compound V3',
@@ -29,23 +90,16 @@ export const compoundAdapter = {
   enabled: true,
 
   getContractAddress() {
-    // Default: official Compound V3 cUSDCv3 Comet on Sepolia
     return getCredential('COMPOUND_COMET_ADDRESS') || '0xAec1F48e02Cfb822Be958b68C7957156EB3F0b6e';
   },
 
   async getAPR() {
     try {
       const provider = getProvider();
-      const comet = new ethers.Contract(this.getContractAddress(), COMET_ABI, provider);
-      const utilization = await comet.getUtilization();
-      const supplyRatePerSec = await comet.getSupplyRate(utilization);
-      const annualRate = Number(BigInt(supplyRatePerSec.toString()) * SECONDS_PER_YEAR) / 1e18;
-      const result = parseFloat((annualRate * 100).toFixed(4));
-      console.log('[Compound getAPR]', { utilization: utilization.toString(), supplyRatePerSec: supplyRatePerSec.toString(), result });
-      return result;
+      return await computeCompoundAPR(this.getContractAddress(), provider);
     } catch (err) {
       console.error('[Compound getAPR error]', err?.message ?? err);
-      return 3.60; // testnet fallback
+      return null; // never fake data — let UI show "APR unavailable"
     }
   },
 

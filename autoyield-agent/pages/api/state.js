@@ -56,9 +56,15 @@ export default async function handler(req, res) {
 
     // Legacy global state (admin / single-user mode)
     const state = readState();
-    const signer = getSigner();
-    const agentAddress = await signer.getAddress();
-    const usdcBalance = await getUsdcBalance(agentAddress);
+    let agentAddress = null;
+    let usdcBalance = 0;
+    if (process.env.AGENT_PRIVATE_KEY) {
+      try {
+        const signer = getSigner();
+        agentAddress = await signer.getAddress();
+        usdcBalance = await getUsdcBalance(agentAddress);
+      } catch { /* RPC or key misconfigured */ }
+    }
     res.status(200).json({ ...state, agentAddress, usdcBalance });
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -40,7 +40,8 @@ export const compoundAdapter = {
       const supplyRatePerSec = await comet.getSupplyRate(utilization);
       const annualRate = Number(BigInt(supplyRatePerSec.toString()) * SECONDS_PER_YEAR) / 1e18;
       return parseFloat((annualRate * 100).toFixed(4));
-    } catch {
+    } catch (err) {
+      console.error('[Compound getAPR error]', err?.message ?? err);
       return 3.60; // testnet fallback
     }
   },

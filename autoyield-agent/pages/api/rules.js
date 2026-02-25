@@ -5,13 +5,25 @@ import { getUserRules, setUserRules } from '../../lib/db.js';
 
 const RULES_FILE = path.join(process.cwd(), 'data', 'rules.json');
 
+const DEFAULT_RULES = {
+  minDeltaPct: 0.4,
+  confidenceThreshold: 0.6,
+  minPersistenceChecks: 4,
+  cooldownMinutes: 60,
+  maxGasUsdPerMove: 2,
+  maxTotalValueUsd: 50000,
+  maxMovesPerYear: 52,
+  executionMode: 'telegram_approval',
+};
+
 // ─── Global (admin/legacy) helpers ────────────────────────────────────────────
 
 export function readRules() {
   try {
-    return JSON.parse(fs.readFileSync(RULES_FILE, 'utf8'));
+    const saved = JSON.parse(fs.readFileSync(RULES_FILE, 'utf8'));
+    return { ...DEFAULT_RULES, ...saved };
   } catch {
-    return {};
+    return { ...DEFAULT_RULES };
   }
 }
 

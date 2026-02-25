@@ -21,19 +21,32 @@ import { executeRotation } from './executor.js';
 
 const CHECK_INTERVAL_MS = 5 * 60 * 1000; // check every 5 minutes
 
-// Use global to survive Next.js hot module replacement
+// Use globals to survive Next.js hot module replacement
 const globalKey = '__autoyield_scheduler__';
+const statsKey = '__autoyield_scheduler_stats__';
 
 export function startScheduler() {
   if (global[globalKey]) return; // already running
   global[globalKey] = true;
+  global[statsKey] = { startedAt: Date.now(), lastRunAt: null, lastRunUsers: 0, totalRuns: 0 };
   console.log('[Scheduler] Started — checking all users every 5 minutes');
   setInterval(runAllUsers, CHECK_INTERVAL_MS);
+}
+
+export function getSchedulerStats() {
+  return global[statsKey] ?? null;
 }
 
 export async function runAllUsers() {
   const users = getAllUsers();
   if (users.length === 0) return;
+
+  const stats = global[statsKey];
+  if (stats) {
+    stats.lastRunAt = Date.now();
+    stats.lastRunUsers = users.length;
+    stats.totalRuns += 1;
+  }
 
   // Fetch APRs and gas cost ONCE per cycle — shared across all users.
   // Avoids N redundant RPC + gas API calls when N users are registered.
@@ -80,14 +93,25 @@ export async function runCheckForUser(userId, aprSnapshot, history, gasCostUsd) 
     }
 
     const usdcBalance = await getUserUsdcBalance(userId);
-    const state = readStateForUser(userId);
+    let state = readStateForUser(userId);
     const rules = readRulesForUser(userId);
+
+    // Clear stale pending approval so it doesn't block new decisions indefinitely
+    if (state.pendingApproval?.expiresAt && Date.now() > state.pendingApproval.expiresAt) {
+      state = { ...state, pendingApproval: null };
+      writeStateForUser(userId, state);
+    }
 
     const stateWithBalance = { ...state, userBalance: usdcBalance };
     const decision = runDecisionEngine({ state: stateWithBalance, aprSnapshot, history, rules, gasCostUsd });
 
     if (decision.action !== 'ROTATE') {
       return { userId, decision };
+    }
+
+    // Don't overwrite a pending approval the user hasn't acted on yet
+    if (state.pendingApproval?.expiresAt && Date.now() < state.pendingApproval.expiresAt) {
+      return { userId, decision, pendingApproval: true, skipped: 'existing_pending' };
     }
 
     const decisionWithExpiry = { ...decision, expiresAt: Date.now() + 30 * 60 * 1000, userId };

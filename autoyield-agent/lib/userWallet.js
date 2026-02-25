@@ -14,7 +14,12 @@ import { CHAINS } from './chains/configs.js';
 
 // 32-byte key derived from env var
 function getEncKey() {
-  const raw = process.env.WALLET_ENCRYPTION_KEY || 'autoyield-dev-encryption-key-32b!';
+  const raw = process.env.WALLET_ENCRYPTION_KEY;
+  if (!raw) {
+    throw new Error(
+      'WALLET_ENCRYPTION_KEY is not set. Generate one with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"'
+    );
+  }
   return Buffer.from(raw.padEnd(32).slice(0, 32));
 }
 

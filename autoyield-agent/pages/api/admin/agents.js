@@ -1,11 +1,12 @@
 import { getAllUsers, getAgentWallet, getUserState } from '../../../lib/db.js';
+import { withAdminAuth } from '../../../lib/auth.js';
 
 /**
  * GET /api/admin/agents
  * Returns all registered users with their agent wallets and current state.
- * Admin-only endpoint (no per-user auth required — same access level as /admin page).
+ * Protected by ADMIN_SECRET (x-admin-secret header or __admin cookie).
  */
-export default function handler(req, res) {
+function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
 
   try {
@@ -29,3 +30,5 @@ export default function handler(req, res) {
     res.status(500).json({ error: err.message });
   }
 }
+
+export default withAdminAuth(handler);

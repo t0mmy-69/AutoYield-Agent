@@ -1,8 +1,9 @@
 import { getCredentialStatus, saveCredentials, CREDENTIAL_SCHEMA } from '../../lib/credentials.js';
+import { withAdminAuth } from '../../lib/auth.js';
 
 const ALLOWED_KEYS = new Set(Object.keys(CREDENTIAL_SCHEMA));
 
-export default function handler(req, res) {
+function handler(req, res) {
   if (req.method === 'GET') {
     return res.status(200).json(getCredentialStatus());
   }
@@ -17,4 +18,11 @@ export default function handler(req, res) {
   }
 
   res.status(405).end();
+}
+
+// GET is public (status only, no secret values exposed).
+// PUT writes credentials — admin only.
+export default function credentialsHandler(req, res) {
+  if (req.method === 'PUT') return withAdminAuth(handler)(req, res);
+  return handler(req, res);
 }

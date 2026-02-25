@@ -47,11 +47,15 @@ const CHAIN_CRED_GROUPS = [
 const PROTOCOL_CRED_GROUPS = [
   {
     id: 'aave', name: 'AAVE V3', color: '#B6509E', chain: 'Sepolia',
-    fields: [{ key: 'AAVE_POOL_ADDRESS', label: 'Pool Address', placeholder: '0x...' }],
+    fields: [
+      { key: 'AAVE_POOL_ADDRESS', label: 'Pool Address', placeholder: '0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951' },
+      // AAVE Sepolia uses its own test USDC (0x94a9...), different from Circle USDC used by Compound
+      { key: 'AAVE_USDC_ADDRESS', label: 'USDC for APR Query', placeholder: '0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8 (Sepolia default)' },
+    ],
   },
   {
     id: 'compound', name: 'Compound V3', color: '#00D395', chain: 'Sepolia',
-    fields: [{ key: 'COMPOUND_COMET_ADDRESS', label: 'Comet Address', placeholder: '0x...' }],
+    fields: [{ key: 'COMPOUND_COMET_ADDRESS', label: 'Comet Address', placeholder: '0xAec1F48e02Cfb822Be958b68C7957156EB3F0b6e' }],
   },
   {
     id: 'radiant', name: 'Radiant Capital', color: '#FF6B35', chain: 'Arbitrum',
@@ -343,6 +347,13 @@ export default function AdminDashboard() {
                 </div>
               );
             })}
+            {Object.entries(aprData.aprErrors || {}).map(([id, errMsg]) => (
+              <div key={id} className={dappStyles.glassCard} style={{ ...styles.aprCard, borderColor: 'rgba(239,68,68,0.3)', opacity: 0.7 }}>
+                <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>{id}</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#ef4444', margin: '12px 0' }}>⚠ Unavailable</div>
+                <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{errMsg}</div>
+              </div>
+            ))}
           </div>
         ) : (
           <div className={dappStyles.glassCard} style={styles.emptyState}>
@@ -357,7 +368,7 @@ export default function AdminDashboard() {
           <h2 style={styles.sectionTitle}>Protocol Registry</h2>
           <p style={styles.sectionDesc}>Enable or disable protocols. Disabled protocols are excluded from all APR comparisons and rotation decisions.</p>
         </div>
-        <ProtocolPanel aprs={aprData?.aprs || {}} showToggle={true} />
+        <ProtocolPanel aprs={aprData?.aprs || {}} aprErrors={aprData?.aprErrors || {}} showToggle={true} />
       </section>
 
       {/* Chain Registry */}

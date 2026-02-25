@@ -1,5 +1,6 @@
 import { ethers } from 'ethers';
 import { getCredential } from './credentials.js';
+import { CHAINS } from './chains/configs.js';
 
 const ERC20_ABI = [
   'function balanceOf(address owner) view returns (uint256)',
@@ -9,6 +10,18 @@ const ERC20_ABI = [
 
 export function getProvider() {
   return new ethers.JsonRpcProvider(getCredential('RPC_URL'));
+}
+
+/**
+ * Returns a provider for the given chain ID.
+ * Falls back to the default Sepolia provider if the chain RPC is not configured.
+ */
+export function getProviderForChain(chainId) {
+  const chain = CHAINS[chainId];
+  if (!chain) return getProvider();
+  const rpcUrl = getCredential(chain.rpcEnvVar) || process.env[chain.rpcEnvVar];
+  if (!rpcUrl) return getProvider();
+  return new ethers.JsonRpcProvider(rpcUrl);
 }
 
 export function getSigner() {

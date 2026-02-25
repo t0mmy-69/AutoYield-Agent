@@ -1,4 +1,4 @@
-import { getAllProtocols, setProtocolEnabled, deleteProtocol } from '../../lib/protocols/index.js';
+import { getAllProtocols, setProtocolEnabled, deleteProtocol, addCustomProtocol } from '../../lib/protocols/index.js';
 import { withAdminAuth } from '../../lib/auth.js';
 
 function handler(req, res) {
@@ -12,8 +12,21 @@ function handler(req, res) {
       description: p.description,
       category: p.category,
       enabled: p.enabled,
+      custom: p.custom || false,
+      type: p.type || null,
     }));
     return res.status(200).json(protocols);
+  }
+
+  if (req.method === 'POST') {
+    // Register a new custom protocol instance
+    const { id, type, name, chain, contractAddress, usdcAddress, color } = req.body || {};
+    try {
+      const entry = addCustomProtocol({ id, type, name, chain, contractAddress, usdcAddress, color });
+      return res.status(201).json({ success: true, protocol: entry });
+    } catch (err) {
+      return res.status(400).json({ error: err.message });
+    }
   }
 
   if (req.method === 'PATCH') {
@@ -35,8 +48,8 @@ function handler(req, res) {
   res.status(405).end();
 }
 
-// GET is public. PATCH/DELETE are admin-only.
+// GET is public. POST/PATCH/DELETE are admin-only.
 export default function protocolsHandler(req, res) {
-  if (req.method === 'PATCH' || req.method === 'DELETE') return withAdminAuth(handler)(req, res);
-  return handler(req, res);
+  if (req.method === 'GET') return handler(req, res);
+  return withAdminAuth(handler)(req, res);
 }

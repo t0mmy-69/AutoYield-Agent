@@ -25,7 +25,7 @@ const PHASE_LABELS = {
   morpho: 'Phase 2',
 };
 
-export default function ProtocolPanel({ aprs = {}, aprErrors = {}, showToggle = false, onAdded }) {
+export default function ProtocolPanel({ aprs = {}, aprErrors = {}, showToggle = false, onAdded, adminFetch = fetch }) {
   const [protocols, setProtocols] = useState([]);
   const [toggling, setToggling] = useState(null);
   const [deleting, setDeleting] = useState(null);
@@ -41,7 +41,7 @@ export default function ProtocolPanel({ aprs = {}, aprErrors = {}, showToggle = 
   const handleToggle = async (id, currentEnabled) => {
     setToggling(id);
     try {
-      const res = await fetch('/api/protocols', {
+      const res = await adminFetch('/api/protocols', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, enabled: !currentEnabled }),
@@ -57,7 +57,7 @@ export default function ProtocolPanel({ aprs = {}, aprErrors = {}, showToggle = 
     if (!confirm(`Remove protocol "${name}" from the registry?`)) return;
     setDeleting(id);
     try {
-      const res = await fetch('/api/protocols', {
+      const res = await adminFetch('/api/protocols', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id }),
@@ -205,13 +205,13 @@ export default function ProtocolPanel({ aprs = {}, aprErrors = {}, showToggle = 
       </div>
 
       {showAddModal && (
-        <AddProtocolModal onClose={() => setShowAddModal(false)} onAdded={handleAdded} />
+        <AddProtocolModal onClose={() => setShowAddModal(false)} onAdded={handleAdded} adminFetch={adminFetch} />
       )}
     </>
   );
 }
 
-function AddProtocolModal({ onClose, onAdded }) {
+function AddProtocolModal({ onClose, onAdded, adminFetch = fetch }) {
   const [form, setForm] = useState({
     type: 'aave',
     name: '',
@@ -236,7 +236,7 @@ function AddProtocolModal({ onClose, onAdded }) {
     }
     setSaving(true);
     try {
-      const res = await fetch('/api/protocols', {
+      const res = await adminFetch('/api/protocols', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...form, id: generatedId }),

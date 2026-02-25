@@ -1,5 +1,133 @@
 # AutoYield Agent — Changelog
 
+## [Roadmap] — Telegram Natural Language Command Interface (Phase 1.5)
+
+> **Status:** Planned — not yet implemented.
+> Extends the existing Telegram approval flow (`/api/telegram`) to accept free-text commands
+> from the user and route them through an AI parser before executing any action.
+
+---
+
+### Overview
+
+Currently the Telegram bot is **output-only**: it sends approval messages and receives
+`approve|{userId}|{decisionId}` / `reject|...` button clicks. This feature makes it
+**bidirectional**: the user can type plain commands in the chat and the agent responds.
+
+```
+User types in Telegram → POST /api/telegram (webhook, message branch)
+  → AI parseCommand()  → intent whitelist check
+  → Confirm gate (for destructive intents)
+  → Execute action
+  → Bot replies with result
+```
+
+---
+
+### New Feature: AI Command Parser (`lib/ai.js`)
+
+New exported function: `parseCommand(userText, currentRules)`
+
+```
+Input:  free-text string, optional current rules object
+Output: { intent, params, replyText, requiresConfirmation }
+```
+
+**Allowed intents (whitelist — model cannot escape this set):**
+
+| Intent | Action | Confirm required? |
+|---|---|---|
+| `update_rules` | Merge params into rules (gas limit, cooldown, etc.) | Yes |
+| `trigger_check` | Run decision engine immediately | No |
+| `query_status` | Return current APR / rules / history / balance | No |
+| `pause` | Set `paused: true` — no rotations will execute | Yes |
+| `resume` | Set `paused: false` | Yes |
+| `unknown` | AI could not parse intent — bot asks for clarification | — |
+
+**Example interactions:**
+
+```
+User:  "set max gas to $1.50"
+Bot:   ⚠️ I'll update maxGasUsdPerMove to $1.50. Confirm?
+       [✅ Confirm] [❌ Cancel]
+
+User:  "what's my current APR?"
+Bot:   📈 Aave: 4.2% | Compound: 3.8% | You are on Aave. Delta: +0.4%.
+
+User:  "pause the agent"
+Bot:   ⚠️ This will stop all automatic rotations. Confirm?
+       [✅ Confirm] [❌ Cancel]
+
+User:  "stop all moves forever please"
+Bot:   ⚠️ I'll set paused: true. Confirm?  ← AI maps intent to pause correctly
+```
+
+---
+
+### Safety Architecture
+
+```
+Layer 1: Telegram Auth
+  → Only accept messages from the registered chatId
+  → Verify TELEGRAM_WEBHOOK_SECRET header (existing)
+
+Layer 2: Intent Whitelist (enforced in code, not by AI)
+  → Set of 5 allowed intents hardcoded server-side
+  → Any intent not in the set → treated as "unknown"
+  → AI cannot inject arbitrary actions
+
+Layer 3: Confirm Gate
+  → update_rules, pause, resume → require inline button confirmation
+  → 5-minute expiry on pending commands
+  → cancel clears pending immediately
+
+Layer 4: Server-side Clamp (reuse existing logic from lib/ai.js)
+  → maxGasUsdPerMove ≥ 0.05
+  → cooldownMinutes ≥ 10
+  → maxMovesPerYear ≤ 365
+  → All numeric values re-clamped regardless of AI output
+
+Layer 5: Rate Limit
+  → 1 command per 30 seconds per chatId (in-memory)
+```
+
+---
+
+### Files to Create / Modify
+
+| File | Change |
+|---|---|
+| `lib/ai.js` | Add `parseCommand(userText, currentRules)` export |
+| `lib/telegramCommandHandler.js` | **New** — `handleTextCommand()`, `handleCommandConfirm()`, `executeIntent()`, pending command store |
+| `lib/telegramBot.js` | Add `sendTextMessage(chatId, text)` and `sendConfirmButton(chatId, text, confirmData, cancelData)` helpers |
+| `pages/api/telegram.js` | Add `update.message` branch → `handleTextCommand()`; add `cmd_confirm|{chatId}` / `cmd_cancel|{chatId}` callback branches |
+
+---
+
+### No New Environment Variables Required
+
+All config reuses existing:
+- `TELEGRAM_BOT_TOKEN` — existing
+- `TELEGRAM_CHAT_ID` — existing (used to validate sender)
+- `TELEGRAM_WEBHOOK_SECRET` — existing (optional but recommended)
+- `ANTHROPIC_API_KEY` — existing (if not set, command parser falls back to keyword matching)
+
+---
+
+### Fallback Without AI
+
+If `ANTHROPIC_API_KEY` is not set, the command handler falls back to a simple keyword matcher:
+
+| Keyword pattern | Maps to intent |
+|---|---|
+| `/pause`, `stop`, `halt` | `pause` |
+| `/resume`, `start`, `unpause` | `resume` |
+| `/check`, `run check`, `check now` | `trigger_check` |
+| `/status`, `apr`, `balance` | `query_status` |
+| `gas`, `cooldown`, `delta` + a number | `update_rules` (best-effort) |
+
+---
+
 ## [Unreleased] — AI Integration: Natural Language Rules Builder + Decision Explainer
 
 All changes live on branch `claude/review-autoyield-spec-TLo9m`.

@@ -307,6 +307,7 @@ Future:
 | Phase | Status | Description |
 |-------|--------|-------------|
 | Phase 1 | Live | Testnets: Ethereum Sepolia, Base Sepolia, Arbitrum Sepolia. Aave + Compound. Any-EVM sign-in. Full AI decision engine. Telegram alerts. |
+| Phase 1.5 | Planned | Telegram Natural Language Command Interface. User types free-text commands to the bot ("set gas limit to $1.5", "pause trading", "check now"). AI parses intent → validates against whitelist → executes with confirmation gate. |
 | Phase 2 | Planned | Mainnets: Ethereum, Arbitrum, Optimism, Base. Radiant, Morpho adapters. Multi-chain routing. |
 | Phase 3 | Planned | ML-based APR forecasting. Uniswap V3 LP strategies. Leveraged yield. |
 | Phase 4 | Planned | `$AYD` governance token. DAO-controlled parameters. Decentralized agent network. |

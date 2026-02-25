@@ -4,8 +4,9 @@ import { getSessionFromRequest } from '../../lib/auth.js';
 import { getUserState, setUserState, getAgentWallet } from '../../lib/db.js';
 import { getUserUsdcBalance } from '../../lib/userWallet.js';
 import { getSigner, getUsdcBalance } from '../../lib/agentWallet.js';
+import { DATA_DIR } from '../../lib/dataPath.js';
 
-const STATE_FILE = path.join(process.cwd(), 'data', 'state.json');
+const STATE_FILE = path.join(DATA_DIR, 'state.json');
 
 // ─── Global (admin/legacy) helpers ────────────────────────────────────────────
 

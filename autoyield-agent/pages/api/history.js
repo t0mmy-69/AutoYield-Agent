@@ -2,8 +2,9 @@ import fs from 'fs';
 import path from 'path';
 import { getSessionFromRequest } from '../../lib/auth.js';
 import { appendUserHistory, getUserHistory } from '../../lib/db.js';
+import { DATA_DIR } from '../../lib/dataPath.js';
 
-const HISTORY_FILE = path.join(process.cwd(), 'data', 'history.json');
+const HISTORY_FILE = path.join(DATA_DIR, 'history.json');
 
 // ─── Global (admin/legacy) helpers ────────────────────────────────────────────
 

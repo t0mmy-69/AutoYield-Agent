@@ -1,7 +1,8 @@
 import fs from 'fs';
 import path from 'path';
+import { DATA_DIR } from './dataPath.js';
 
-const CRED_FILE = path.join(process.cwd(), 'data', 'credentials.json');
+const CRED_FILE = path.join(DATA_DIR, 'credentials.json');
 
 // All known credential keys with metadata for the admin UI
 export const CREDENTIAL_SCHEMA = {

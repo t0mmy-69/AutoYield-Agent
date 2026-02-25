@@ -1,6 +1,6 @@
 import { ethers } from 'ethers';
-import { getProvider, approveToken } from '../agentWallet.js';
-import { getCredential } from '../credentials.js';
+import { getProvider, approveToken } from '../../agentWallet.js';
+import { getCredential } from '../../credentials.js';
 
 const COMET_ABI = [
   'function getUtilization() view returns (uint256)',

@@ -85,6 +85,14 @@ export function getDb() {
       callback_id  TEXT    PRIMARY KEY,
       processed_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
     );
+
+    CREATE TABLE IF NOT EXISTS ai_decision_cache (
+      decision_id   TEXT    PRIMARY KEY,
+      ui_text       TEXT    NOT NULL,
+      telegram_text TEXT    NOT NULL,
+      admin_note    TEXT    NOT NULL,
+      created_at    INTEGER DEFAULT (unixepoch() * 1000)
+    );
   `);
 
   return _db;
@@ -254,4 +262,27 @@ export function markTelegramCallbackProcessed(callbackId) {
   getDb().prepare(
     'INSERT OR IGNORE INTO telegram_callbacks (callback_id) VALUES (?)'
   ).run(String(callbackId));
+}
+
+// ─── AI Decision Cache ─────────────────────────────────────────────────────────
+
+/** Get cached AI explanation for a decision ID. Returns null if not cached. */
+export function getCachedAiExplanation(decisionId) {
+  const row = getDb().prepare('SELECT * FROM ai_decision_cache WHERE decision_id = ?').get(decisionId);
+  if (!row) return null;
+  return { uiText: row.ui_text, telegramText: row.telegram_text, adminNote: row.admin_note };
+}
+
+/** Cache an AI explanation for a decision ID (idempotent). */
+export function saveAiExplanation(decisionId, explanation) {
+  getDb().prepare(`
+    INSERT INTO ai_decision_cache (decision_id, ui_text, telegram_text, admin_note)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(decision_id) DO NOTHING
+  `).run(
+    String(decisionId),
+    String(explanation.uiText ?? ''),
+    String(explanation.telegramText ?? ''),
+    String(explanation.adminNote ?? ''),
+  );
 }

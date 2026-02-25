@@ -44,6 +44,7 @@ export default function Dashboard() {
   const [state, setState] = useState(null);
   const [aprData, setAprData] = useState(null);
   const [decision, setDecision] = useState(null);
+  const [aiExplanation, setAiExplanation] = useState(null);
   const [rules, setRules] = useState(null);
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -180,6 +181,7 @@ export default function Dashboard() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setDecision(data.decision);
+      if (data.aiExplanation) setAiExplanation(data.aiExplanation);
       if (data.aprSnapshot) setAprData(prev => ({ ...prev, ...data.aprSnapshot }));
       await fetchState();
       await fetchHistory();
@@ -218,6 +220,18 @@ export default function Dashboard() {
       body: JSON.stringify(newRules),
     });
     if (res.ok) setRules(await res.json());
+  };
+
+  const handleAiGenerateRules = async (userText) => {
+    const allowedProtocols = aprData?.aprs ? Object.keys(aprData.aprs) : [];
+    const res = await fetch('/api/ai/rules', {
+      method: 'POST',
+      headers: authHeaders(token),
+      body: JSON.stringify({ userText, currentRules: rules, allowedProtocols }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'AI request failed');
+    return data;
   };
 
   const enrichedAprData = aprData ? {
@@ -330,11 +344,12 @@ export default function Dashboard() {
           decision={decision}
           onRunCheck={handleRunCheck}
           loading={loading}
+          aiExplanation={aiExplanation}
         />
       </div>
 
       <ProtocolPanel aprs={aprData?.aprs || {}} />
-      <RulesPanel rules={rules} onSave={handleSaveRules} />
+      <RulesPanel rules={rules} onSave={handleSaveRules} onAiGenerate={handleAiGenerateRules} />
       <TelegramPanel token={token} />
       <HistoryTable history={history} />
     </div>

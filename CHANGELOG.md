@@ -1,5 +1,81 @@
 # AutoYield Agent — Changelog
 
+## [Unreleased] — AI Integration: Natural Language Rules Builder + Decision Explainer
+
+All changes live on branch `claude/review-autoyield-spec-TLo9m`.
+
+---
+
+### New features
+
+#### 1. Feature A — Natural Language Rules Builder (`POST /api/ai/rules`)
+**Files:** `lib/ai.js`, `pages/api/ai/rules.js`, `components/RulesPanel.jsx`, `pages/dapp.js`
+
+Converts plain-text user strategy into a validated rules JSON. The AI is constrained to the internal flat schema — unknown fields are stripped, unsafe values are clamped at the API level regardless of what the model returns.
+
+UI flow:
+1. Textarea "Describe your strategy" in the Rules panel
+2. Click "✨ Generate Rules with AI"
+3. Preview shows AI explanation + warnings + JSON diff
+4. "✓ Apply AI Rules" merges into localRules and saves to DB
+
+Safety clamping applied server-side:
+- `maxGasUsdPerMove` ≥ 0.05
+- `cooldownMinutes` ≥ 10
+- `maxMovesPerYear` ≤ 365
+- `minDeltaPct` ≥ 0.1
+- `confidenceThreshold` clamped 0–1
+- `protocolAllowlist` validated against registered protocol IDs
+- Unknown keys stripped
+
+60-second per-user/per-IP rate limit applied (same as `/api/check`).
+
+#### 2. Feature B — Decision Explainer (`POST /api/ai/explain`)
+**Files:** `lib/ai.js`, `pages/api/ai/explain.js`, `components/DecisionPanel.jsx`, `pages/dapp.js`, `pages/api/check.js`
+
+Converts the deterministic decision object into human-readable text. Runs server-side during `/api/check` so the Telegram message also gets the AI text.
+
+- **UI:** Decision panel shows "🤖 AI Analysis" block instead of raw `reason` string when explanation is available.
+- **Telegram:** `sendApprovalMessage()` uses AI-generated `telegramText` (1-2 sentences) when provided; falls back to deterministic stats block.
+- **Cache:** Explanations stored in `ai_decision_cache` DB table per `decision.id` — no duplicate API calls.
+- **Safety:** AI receives a read-only copy of the decision (no keys + no ability to change action/amounts). The action field is never passed back from the AI.
+
+#### 3. Fallback mode (spec §9)
+If `ANTHROPIC_API_KEY` is not set or any AI call fails:
+- Rules builder: returns `null` rules + warning "AI unavailable, default conservative rules applied."
+- Decision explainer: returns the exact template strings from the spec:
+  - NOOP: `NOOP: delta {deltaPct}% does not justify gas {estimatedGasUsd}. ...`
+  - ROTATE: `ROTATE {from} -> {to}: delta {deltaPct}%, est gas {estimatedGasUsd}, ...`
+
+System continues operating in both cases — AI layer is entirely optional.
+
+---
+
+### Files Changed
+
+| File | Change |
+|---|---|
+| `lib/ai.js` | **New** — Anthropic API client, `buildRulesWithAI`, `explainDecision`, `fallbackRules`, `fallbackExplanation` |
+| `lib/db.js` | Add `ai_decision_cache` table; `getCachedAiExplanation`, `saveAiExplanation` helpers |
+| `pages/api/ai/rules.js` | **New** — POST endpoint for Feature A |
+| `pages/api/ai/explain.js` | **New** — POST endpoint for Feature B |
+| `pages/api/check.js` | Call `explainDecision` after engine run; pass `telegramText` to `sendApprovalMessage`; include `aiExplanation` in response |
+| `lib/telegramBot.js` | `sendApprovalMessage(decision, customText?)` — uses AI text when provided |
+| `components/DecisionPanel.jsx` | Accept `aiExplanation` prop; show AI Analysis block |
+| `components/RulesPanel.jsx` | Add AI textarea + generate button + preview + apply button |
+| `pages/dapp.js` | `aiExplanation` state; `handleAiGenerateRules` callback; wire props to panels |
+| `lib/credentials.js` | Add `ANTHROPIC_API_KEY` to credential schema |
+
+---
+
+### Environment Variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | Optional | Enables AI features. Without it, system uses deterministic fallback templates. |
+
+---
+
 ## [Unreleased] — Morpho Blue Adapter, Multi-Chain APR Provider, Telegram Webhook, Scheduler Auto-Start
 
 All changes live on branch `claude/review-autoyield-spec-TLo9m`.

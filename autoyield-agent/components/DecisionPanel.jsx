@@ -1,6 +1,6 @@
 import dappStyles from '../styles/Dapp.module.css';
 
-export default function DecisionPanel({ decision, onRunCheck, loading }) {
+export default function DecisionPanel({ decision, onRunCheck, loading, aiExplanation }) {
   const isRotate = decision?.action === 'ROTATE';
   const badgeColor = isRotate ? 'linear-gradient(135deg, var(--neon-emerald), var(--neon-cyan))' : 'linear-gradient(135deg, #475569, #334155)';
   const glowShadow = isRotate ? 'var(--shadow-glow-emerald)' : 'none';
@@ -17,7 +17,14 @@ export default function DecisionPanel({ decision, onRunCheck, loading }) {
 
       {decision && (
         <>
-          <p style={styles.reason}>{decision.reason}</p>
+          {aiExplanation?.uiText ? (
+            <div style={styles.aiBox}>
+              <span style={styles.aiLabel}>🤖 AI Analysis</span>
+              <p style={styles.aiText}>{aiExplanation.uiText}</p>
+            </div>
+          ) : (
+            <p style={styles.reason}>{decision.reason}</p>
+          )}
           <div style={styles.divider} />
           <div style={styles.row}>
             <span style={styles.label}>Route</span>
@@ -60,6 +67,9 @@ export default function DecisionPanel({ decision, onRunCheck, loading }) {
 const styles = {
   badge: { display: 'inline-flex', padding: '8px 24px', borderRadius: 12, fontWeight: 900, fontSize: '1.2rem', color: '#fff', marginBottom: 16, letterSpacing: 1.5 },
   reason: { color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.6, margin: '0 0 16px' },
+  aiBox: { background: 'rgba(176, 38, 255, 0.08)', border: '1px solid rgba(176, 38, 255, 0.25)', borderRadius: 10, padding: '12px 16px', marginBottom: 16 },
+  aiLabel: { fontSize: '0.75rem', fontWeight: 700, color: 'var(--neon-purple)', letterSpacing: 1, textTransform: 'uppercase', display: 'block', marginBottom: 6 },
+  aiText: { color: 'var(--text-main)', fontSize: '0.9rem', lineHeight: 1.65, margin: 0 },
   divider: { height: 1, background: 'linear-gradient(90deg, transparent, var(--border-glass), transparent)', margin: '16px 0' },
   row: { display: 'flex', justifyContent: 'space-between', marginBottom: 14, fontSize: '0.95rem' },
   label: { color: 'var(--text-muted)' },

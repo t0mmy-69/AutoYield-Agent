@@ -2,8 +2,8 @@
 
 Welcome to the comprehensive system documentation for **AutoYield Agent**. This document serves as the master reference for the project's architecture, core modules, API surface, user interface, and integration points.
 
-> **Last updated:** 2026-02-24
-> **Version:** 3.3 — Bug fixes: APR history dedup, chain-aware executor, Telegram replay prevention, crypto decision IDs
+> **Last updated:** 2026-02-25
+> **Version:** 3.4 — AI integration: Natural Language Rules Builder + Decision Explainer (Claude Haiku 4.5)
 
 ---
 
@@ -17,12 +17,13 @@ Welcome to the comprehensive system documentation for **AutoYield Agent**. This 
 6. [Core Engine Modules](#6-core-engine-modules)
 7. [24/7 Scheduler](#7-247-scheduler)
 8. [API Reference](#8-api-reference)
-9. [User Interface](#9-user-interface)
-10. [Data Layer](#10-data-layer)
-11. [Environment Variables](#11-environment-variables)
-12. [Roadmap](#12-roadmap)
-13. [Getting Started](#13-getting-started)
-14. [Changelog](#14-changelog)
+9. [AI Layer](#9-ai-layer)
+10. [User Interface](#10-user-interface)
+11. [Data Layer](#11-data-layer)
+12. [Environment Variables](#12-environment-variables)
+13. [Roadmap](#13-roadmap)
+14. [Getting Started](#14-getting-started)
+15. [Changelog](#15-changelog)
 
 ---
 
@@ -508,6 +509,13 @@ All state/rules/history endpoints detect the `Authorization: Bearer` header auto
 | `GET` | `/api/credentials` | List all known credential keys with value, source (`file`/`env`/`unset`), and placeholder |
 | `PUT` | `/api/credentials` | `{ KEY: value, ... }` — save credentials to `data/credentials.json`. Pass `""` to clear |
 
+### AI
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/ai/rules` | Convert natural language to validated rules JSON. Rate-limited 1/60s per user. Returns `{ rules, explanation, warnings }`. Falls back to defaults if AI unavailable. |
+| `POST` | `/api/ai/explain` | Generate human-readable explanation for a decision object. Cached per `decision.id`. Returns `{ uiText, telegramText, adminNote }`. |
+
 ### Scheduler / Cron
 
 | Method | Endpoint | Description |
@@ -528,7 +536,106 @@ All state/rules/history endpoints detect the `Authorization: Bearer` header auto
 
 ---
 
-## 9. User Interface
+## 9. AI Layer
+
+The AI layer adds a natural-language interface and human-readable explanations on top of the deterministic engine. It is entirely optional — the system runs identically with or without `ANTHROPIC_API_KEY`.
+
+### Architecture & Safety Contract
+
+```
+User input / Decision object
+        ↓
+   lib/ai.js  (callClaude)
+        ↓
+  Anthropic API  (claude-haiku-4-5-20251001)
+        ↓
+   Output validation & sanitization  ← AI CANNOT bypass this
+        ↓
+   Validated rules JSON / Explanation text
+```
+
+Hard rules enforced in `lib/ai.js`, regardless of model output:
+- AI **never** receives signing keys or wallet addresses
+- AI **never** changes `decision.action` (NOOP/ROTATE) — the action is not in the model's output schema
+- AI **never** fabricates numbers — only the provided decision object is used
+- Unknown fields from AI output are stripped before returning to caller
+- Unsafe values (gas caps, cooldowns, etc.) are clamped server-side
+
+### Feature A — Natural Language Rules Builder
+
+**Endpoint:** `POST /api/ai/rules`
+
+Converts plain-text strategy description into a validated flat rules JSON.
+
+**Request:**
+```json
+{
+  "userText": "Low risk, max 1 move per day, gas below $1, Telegram approvals",
+  "currentRules": { ... } | null,
+  "allowedProtocols": ["aave", "compound"],
+  "allowedChains": [{ "chainId": 11155111, "name": "Ethereum Sepolia" }]
+}
+```
+
+**Response:**
+```json
+{
+  "rules": { "minDeltaPct": 0.5, "cooldownMinutes": 1440, "executionMode": "telegram_approval", ... },
+  "explanation": "3-5 sentences describing what was configured and why.",
+  "warnings": ["Gas cap was below minimum — set to $0.05."]
+}
+```
+
+Clamping applied server-side: `maxGasUsdPerMove ≥ 0.05`, `cooldownMinutes ≥ 10`, `maxMovesPerYear ≤ 365`, `minDeltaPct ≥ 0.1`, `confidenceThreshold` clamped 0–1. Rate limit: 1 call / 60s per user.
+
+### Feature B — Decision Explainer
+
+**Endpoint:** `POST /api/ai/explain`
+
+Converts the deterministic decision object into human-readable text.
+
+**Request:**
+```json
+{
+  "decision": { ... decision object ... },
+  "userContext": { "executionMode": "telegram_approval", "userAddress": "0x..." }
+}
+```
+
+**Response:**
+```json
+{
+  "uiText": "2-4 sentences for the dashboard.",
+  "telegramText": "1-2 short actionable sentences.",
+  "adminNote": "1-3 sentences for the admin log."
+}
+```
+
+Results are cached per `decision.id` in the `ai_decision_cache` DB table — no duplicate API calls on retries.
+
+Also called server-side inside `POST /api/check`: the `aiExplanation` object is included in the check response and the `telegramText` is passed to `sendApprovalMessage()`.
+
+### Fallback Templates (spec §9)
+
+When `ANTHROPIC_API_KEY` is missing or any AI call fails, `lib/ai.js` exports:
+
+- `fallbackExplanation(decision)` — returns `{ uiText, telegramText, adminNote }` using the spec template strings
+- `fallbackRules()` — returns `{ rules: null, explanation: "...", warnings: ["AI unavailable..."] }`
+
+The UI always renders and the system always operates in fallback mode.
+
+### Files
+
+| File | Role |
+|---|---|
+| `lib/ai.js` | Anthropic API client, `buildRulesWithAI`, `explainDecision`, fallback functions |
+| `pages/api/ai/rules.js` | Feature A endpoint — rate-limited, validates output |
+| `pages/api/ai/explain.js` | Feature B endpoint — caches by decision ID |
+| `lib/db.js` → `ai_decision_cache` | Cache table: `decision_id`, `ui_text`, `telegram_text`, `admin_note` |
+
+---
+
+## 10. User Interface
 
 ### Landing Page (`pages/index.js`)
 
@@ -652,6 +759,12 @@ CRON_SECRET=your-cron-secret
 
 # Optional: Telegram webhook secret token (set via Telegram setWebhook API)
 TELEGRAM_WEBHOOK_SECRET=your-webhook-secret
+
+# ── AI Layer (optional) ───────────────────────────────────────────────────────
+
+# Anthropic API key — enables AI Rules Builder + Decision Explainer (Feature A/B).
+# Leave unset to use deterministic fallback templates. System fully operational either way.
+ANTHROPIC_API_KEY=sk-ant-...
 
 
 # ── Global Agent (legacy/admin mode) ─────────────────────────────────────────

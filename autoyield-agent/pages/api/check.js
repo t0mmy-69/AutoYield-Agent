@@ -6,10 +6,11 @@ import { estimateGasCostUsd } from '../../lib/gasEstimator.js';
 import { getSigner, getUsdcBalance } from '../../lib/agentWallet.js';
 import { getUserSigner, getUserUsdcBalance } from '../../lib/userWallet.js';
 import { getSessionFromRequest } from '../../lib/auth.js';
-import { getAgentWallet } from '../../lib/db.js';
+import { getAgentWallet, saveAiExplanation } from '../../lib/db.js';
 import { readStateForUser, writeStateForUser } from './state.js';
 import { readRulesForUser } from './rules.js';
 import { sendApprovalMessage } from '../../lib/telegramBot.js';
+import { explainDecision, fallbackExplanation } from '../../lib/ai.js';
 
 // Simple in-memory rate limiter: 1 manual check per user/IP per 60 seconds
 const rateLimitMap = new Map(); // key → lastCalledMs
@@ -58,13 +59,30 @@ export default async function handler(req, res) {
     const stateWithBalance = { ...state, userBalance: usdcBalance };
     const decision = runDecisionEngine({ state: stateWithBalance, aprSnapshot, history, rules, gasCostUsd });
 
+    // ── AI explain (Feature B) ─────────────────────────────────────────────────
+    // Run regardless of action so the UI always gets an explanation.
+    // Falls back to template strings if ANTHROPIC_API_KEY is not set or AI fails.
+    let aiExplanation = null;
+    try {
+      if (process.env.ANTHROPIC_API_KEY) {
+        aiExplanation = await explainDecision(decision, { executionMode: rules.executionMode });
+        saveAiExplanation(decision.id, aiExplanation);
+      } else {
+        aiExplanation = fallbackExplanation(decision);
+      }
+    } catch (aiErr) {
+      console.warn('[AI explain failed, using fallback]', aiErr.message);
+      aiExplanation = fallbackExplanation(decision);
+    }
+
     if (decision.action === 'ROTATE') {
       // Add expiry for Telegram security (30 min window)
       const decisionWithExpiry = { ...decision, expiresAt: Date.now() + 30 * 60 * 1000, userId };
       writeStateForUser(userId, { ...state, pendingApproval: decisionWithExpiry });
 
       if (rules.executionMode === 'telegram_approval') {
-        await sendApprovalMessage(decisionWithExpiry);
+        // Use AI-generated telegram text when available
+        await sendApprovalMessage(decisionWithExpiry, aiExplanation?.telegramText ?? null);
       }
 
       if (rules.executionMode === 'auto') {
@@ -74,7 +92,7 @@ export default async function handler(req, res) {
       }
     }
 
-    res.status(200).json({ decision, aprSnapshot, usdcBalance, gasCostUsd, userId });
+    res.status(200).json({ decision, aprSnapshot, usdcBalance, gasCostUsd, userId, aiExplanation });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

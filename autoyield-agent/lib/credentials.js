@@ -6,6 +6,9 @@ const CRED_FILE = path.join(DATA_DIR, 'credentials.json');
 
 // All known credential keys with metadata for the admin UI
 export const CREDENTIAL_SCHEMA = {
+  // AI integration
+  ANTHROPIC_API_KEY: { label: 'Anthropic API Key', placeholder: 'sk-ant-...', section: 'ai', description: 'Enables AI Rules Builder + Decision Explainer. Leave blank to use deterministic fallbacks.' },
+
   // Sepolia (Phase 1 — live)
   RPC_URL:                  { chain: 'sepolia',  label: 'RPC URL',            placeholder: 'https://sepolia.infura.io/v3/YOUR_KEY' },
   USDC_ADDRESS:             { chain: 'sepolia',  label: 'USDC Contract',      placeholder: '0xUsdc...' },

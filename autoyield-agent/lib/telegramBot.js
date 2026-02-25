@@ -17,7 +17,14 @@ function getTelegramConfig() {
   };
 }
 
-export async function sendApprovalMessage(decision) {
+/**
+ * Send a Telegram approval message for a ROTATE decision.
+ *
+ * @param {object} decision       - Decision object (with expiresAt and userId embedded).
+ * @param {string|null} customText - AI-generated telegram text (1-2 sentences).
+ *   If provided, replaces the default stats block. Approve/Reject buttons always appended.
+ */
+export async function sendApprovalMessage(decision, customText = null) {
   const { botToken, chatId } = getTelegramConfig();
   if (!botToken || !chatId) {
     console.warn('Telegram not configured — skipping approval message');
@@ -31,13 +38,18 @@ export async function sendApprovalMessage(decision) {
   // Format: "approve|{userId}|{decisionId}" — pipe-separated to avoid ambiguity with underscores.
   const uid = userId != null ? String(userId) : 'null';
 
+  // Use AI-generated text when available; fall back to deterministic stats block.
+  const body = customText
+    ? String(customText)
+    : `From: *${fromLabel}* → *${toLabel}*\n` +
+      `Delta: +${deltaPct}% (EMA: ${emaDelta}%)\n` +
+      `Confidence: ${confidenceScore}\n` +
+      `Gas: ~$${gasCostUsd}\n` +
+      `Projected Annual Gain: $${projectedAnnualGain}`;
+
   const text =
     `🤖 *AutoYield Decision: ROTATE*\n\n` +
-    `From: *${fromLabel}* → *${toLabel}*\n` +
-    `Delta: +${deltaPct}% (EMA: ${emaDelta}%)\n` +
-    `Confidence: ${confidenceScore}\n` +
-    `Gas: ~$${gasCostUsd}\n` +
-    `Projected Annual Gain: $${projectedAnnualGain}\n\n` +
+    `${body}\n\n` +
     `Approve to execute the rotation now.`;
 
   const keyboard = {

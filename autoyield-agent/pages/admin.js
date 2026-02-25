@@ -44,6 +44,21 @@ const CHAIN_CRED_GROUPS = [
   },
 ];
 
+const AI_CRED_GROUPS = [
+  {
+    id: 'ai', name: 'AI Layer (Claude)', color: '#9747FF', phase: 'Optional',
+    fields: [
+      {
+        key: 'ANTHROPIC_API_KEY',
+        label: 'Anthropic API Key',
+        placeholder: 'sk-ant-api03-...',
+        description: 'Enables AI Rules Builder + Decision Explainer. Leave blank to use deterministic fallback templates.',
+        secret: true,
+      },
+    ],
+  },
+];
+
 const PROTOCOL_CRED_GROUPS = [
   {
     id: 'aave', name: 'AAVE V3', color: '#B6509E', chain: 'Sepolia',
@@ -460,6 +475,21 @@ export default function AdminDashboard() {
           <span style={{ color: '#ff9900', marginLeft: 8 }}>⚠ Agent private key is managed via env only.</span>
         </p>
 
+        <h3 style={styles.subSectionTitle}>AI Integration</h3>
+        <div style={{ marginBottom: 28 }}>
+          {AI_CRED_GROUPS.map(group => (
+            <CredentialCard
+              key={group.id}
+              group={group}
+              credentials={credentials}
+              credEdits={credEdits}
+              setCredEdits={setCredEdits}
+              onSave={handleSaveCreds}
+              saving={credSaving === group.id}
+            />
+          ))}
+        </div>
+
         <h3 style={styles.subSectionTitle}>Chain RPC & USDC</h3>
         <div style={styles.credGrid}>
           {CHAIN_CRED_GROUPS.map(group => (
@@ -558,12 +588,16 @@ function CredentialCard({ group, credentials, credEdits, setCredEdits, onSave, s
               </label>
               <span style={{ fontSize: 10, color: sourceColor, fontWeight: 700 }}>● {sourceLabel}</span>
             </div>
+            {field.description && (
+              <p style={{ fontSize: 11, color: '#64748b', margin: '0 0 6px', lineHeight: 1.5 }}>{field.description}</p>
+            )}
             <input
-              type="text"
+              type={field.secret ? 'password' : 'text'}
               value={credEdits[field.key] || ''}
               onChange={e => setCredEdits(prev => ({ ...prev, [field.key]: e.target.value }))}
               placeholder={cred.source === 'env' ? '(configured via env)' : field.placeholder}
               spellCheck={false}
+              autoComplete="off"
               className="input-glass"
               style={{ ...styles.credInput, padding: '10px 12px' }}
             />

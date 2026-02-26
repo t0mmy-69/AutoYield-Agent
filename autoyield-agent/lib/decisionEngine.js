@@ -15,13 +15,51 @@ function randomDecisionId() {
 /**
  * Main decision engine — 6 steps as defined in spec.
  * Supports N protocols dynamically via aprSnapshot.aprs map.
- * Returns a decision object with action ROTATE or NOOP + full reasoning.
+ *
+ * Case 1 (INITIAL_SUPPLY): No active position + idle balance → supply immediately.
+ * Case 2 (ROTATE / NOOP): Already supplied → evaluate whether to rotate.
  */
 export function runDecisionEngine({ state, aprSnapshot, history, rules, gasCostUsd }) {
   const { aprs, best: target, bestAPR: targetAPR } = aprSnapshot;
   const { currentProtocol, lastMoveTimestamp } = state;
   const userBalance = state.userBalance || 0;
 
+  // ── Case 1: No active position — supply idle capital immediately ─────────
+  const hasActivePosition = currentProtocol && currentProtocol !== 'none';
+  const minCapital = rules.minCapital ?? 1; // minimum USDC to bother supplying
+
+  if (!hasActivePosition) {
+    if (userBalance < minCapital) {
+      return noop({
+        aprSnapshot, gasCostUsd,
+        currentProtocol: null,
+        reason: `No active position and balance $${userBalance.toFixed(2)} below minimum capital $${minCapital}. Waiting for deposit.`,
+      });
+    }
+    return {
+      action: 'INITIAL_SUPPLY',
+      from: null,
+      to: target,
+      fromAPR: 0,
+      toAPR: targetAPR,
+      deltaPct: 0,
+      emaDelta: 0,
+      momentum: 0,
+      deltaVolatility: 0,
+      gasCostUsd,
+      projectedAnnualGain: parseFloat((userBalance * (targetAPR / 100)).toFixed(2)),
+      expectedAnnualGasCost: 0,
+      netAnnualGain: parseFloat((userBalance * (targetAPR / 100)).toFixed(2)),
+      confidenceScore: 1,
+      persistenceChecks: 0,
+      allAPRs: aprs,
+      reason: `No active position. Supplying $${userBalance.toFixed(2)} USDC to best protocol ${target} at ${targetAPR}% APR.`,
+      timestamp: Date.now(),
+      id: randomDecisionId(),
+    };
+  }
+
+  // ── Case 2: Already supplied — evaluate rotation ─────────────────────────
   // ── Step 1: Determine target protocol ───────────────────────────────────
   const currentAPR = aprs[currentProtocol] ?? 0;
   const deltaPct = parseFloat((targetAPR - currentAPR).toFixed(4));

@@ -1,7 +1,7 @@
 import { getSigner, getUsdcBalance } from '../../lib/agentWallet.js';
 import { getUserSigner, getUserUsdcBalance } from '../../lib/userWallet.js';
 import { getSessionFromRequest } from '../../lib/auth.js';
-import { executeRotation } from '../../lib/executor.js';
+import { executeRotation, executeInitialSupply } from '../../lib/executor.js';
 import { getAgentWallet } from '../../lib/db.js';
 import { readStateForUser, writeStateForUser } from './state.js';
 import { appendHistoryForUser } from './history.js';
@@ -9,11 +9,17 @@ import { appendHistoryForUser } from './history.js';
 export async function executeApproval(decision, state, usdcBalance, signer, userId = null) {
   const wallet = userId != null ? getAgentWallet(userId) : null;
   const chainId = wallet?.chain_id || 'sepolia';
-  const result = await executeRotation({ from: decision.from, to: decision.to, signer, chainId });
+
+  let result;
+  if (decision.action === 'INITIAL_SUPPLY') {
+    result = await executeInitialSupply({ to: decision.to, signer, chainId });
+  } else {
+    result = await executeRotation({ from: decision.from, to: decision.to, signer, chainId });
+  }
 
   const historyEntry = {
     ...decision,
-    action: 'ROTATE',
+    action: decision.action === 'INITIAL_SUPPLY' ? 'INITIAL_SUPPLY' : 'ROTATE',
     executedAt: Date.now(),
     txHash: result.txHash,
     withdrawTxHash: result.withdrawTxHash,

@@ -54,3 +54,37 @@ export async function executeRotation({ from, to, signer, chainId = 'sepolia' })
     amountUsdc: parseFloat(ethers.formatUnits(amount, decimals)).toFixed(2),
   };
 }
+
+/**
+ * Execute initial supply: no withdrawal step — just supply idle USDC balance.
+ * Used when agent has no active position and there's idle USDC to deploy.
+ */
+export async function executeInitialSupply({ to, signer, chainId = 'sepolia' }) {
+  const toAdapter = getProtocol(to);
+  if (!toAdapter) throw new Error(`Unknown target protocol: "${to}"`);
+
+  const agentAddress = await signer.getAddress();
+
+  const chain = CHAINS[chainId];
+  const usdcAddress = (chain ? getCredential(chain.usdcEnvVar) : null)
+    || getCredential('USDC_ADDRESS')
+    || process.env.USDC_ADDRESS;
+  if (!usdcAddress) throw new Error(`USDC address not configured for chain: ${chainId}`);
+
+  const usdc = new ethers.Contract(usdcAddress, ERC20_ABI, signer);
+  const decimals = await usdc.decimals();
+  const amount = await usdc.balanceOf(agentAddress);
+  if (amount === 0n) throw new Error('No USDC available to supply');
+
+  const supplyReceipt = await toAdapter.supply({ signer, usdcAddress, amount });
+
+  return {
+    withdrawTxHash: null,
+    supplyTxHash: supplyReceipt.hash,
+    txHash: supplyReceipt.hash,
+    blockNumber: supplyReceipt.blockNumber,
+    from: null,
+    to,
+    amountUsdc: parseFloat(ethers.formatUnits(amount, decimals)).toFixed(2),
+  };
+}

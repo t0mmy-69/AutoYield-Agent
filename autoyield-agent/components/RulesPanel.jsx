@@ -22,7 +22,9 @@ export default function RulesPanel({ rules, onSave, onAiGenerate }) {
   const [aiError, setAiError] = useState(null);
 
   const handleChange = (key, value) => {
-    setLocalRules(r => ({ ...r, [key]: parseFloat(value) || value }));
+    // executionMode is a string enum — never coerce to number
+    const parsed = key === 'executionMode' ? value : (parseFloat(value) || value);
+    setLocalRules(r => ({ ...r, [key]: parsed }));
   };
 
   const handleSave = async () => {

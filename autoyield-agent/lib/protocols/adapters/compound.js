@@ -9,6 +9,8 @@ const COMET_ABI = [
   'function withdraw(address asset, uint256 amount)',
   // balanceOf returns the agent's supply position (base token units), NOT ERC20 balance
   'function balanceOf(address account) view returns (uint256)',
+  // baseToken returns the underlying asset address (e.g. USDC) for this Comet deployment
+  'function baseToken() view returns (address)',
 ];
 
 const ERC20_ABI = [
@@ -59,6 +61,19 @@ export function createCompoundAdapter(config) {
       }
     },
 
+    async resolveUsdc({ signer }) {
+      const comet = new ethers.Contract(contractAddress, COMET_ABI, signer.provider ?? signer);
+      return await comet.baseToken();
+    },
+
+    async hasPosition({ signer }) {
+      try {
+        const comet = new ethers.Contract(contractAddress, COMET_ABI, signer.provider ?? signer);
+        const bal = await comet.balanceOf(await signer.getAddress());
+        return bal > 0n;
+      } catch { return false; }
+    },
+
     async supply({ signer, usdcAddress, amount }) {
       const erc20 = new ethers.Contract(usdcAddress, ERC20_ABI, signer);
       const decimals = await erc20.decimals();
@@ -101,6 +116,19 @@ export const compoundAdapter = {
       console.error('[Compound getAPR error]', err?.message ?? err);
       return null; // never fake data — let UI show "APR unavailable"
     }
+  },
+
+  async resolveUsdc({ signer }) {
+    const comet = new ethers.Contract(this.getContractAddress(), COMET_ABI, signer.provider ?? signer);
+    return await comet.baseToken();
+  },
+
+  async hasPosition({ signer }) {
+    try {
+      const comet = new ethers.Contract(this.getContractAddress(), COMET_ABI, signer.provider ?? signer);
+      const bal = await comet.balanceOf(await signer.getAddress());
+      return bal > 0n;
+    } catch { return false; }
   },
 
   async supply({ signer, usdcAddress, amount }) {

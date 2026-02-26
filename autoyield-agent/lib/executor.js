@@ -56,26 +56,32 @@ export async function executeRotation({ from, to, signer, chainId = 'sepolia' })
 }
 
 /**
- * Execute initial supply: no withdrawal step — just supply idle USDC balance.
- * Used when agent has no active position and there's idle USDC to deploy.
+ * Execute initial supply: resolve USDC per-protocol, then approve + supply.
+ * No withdrawal step — agent has no active position.
+ *
+ * USDC resolution priority:
+ *   - Adapter's resolveUsdc() method (protocol-specific):
+ *       Aave  → AAVE_USDC_ADDRESS env || AAVE_SEPOLIA_USDC constant
+ *       Compound → comet.baseToken() (reads on-chain, authoritative)
+ *       Custom → config.usdcAddress stored in protocols.json
  */
-export async function executeInitialSupply({ to, signer, chainId = 'sepolia' }) {
+export async function executeInitialSupply({ to, signer }) {
   const toAdapter = getProtocol(to);
   if (!toAdapter) throw new Error(`Unknown target protocol: "${to}"`);
 
   const agentAddress = await signer.getAddress();
 
-  const chain = CHAINS[chainId];
-  const usdcAddress = (chain ? getCredential(chain.usdcEnvVar) : null)
-    || getCredential('USDC_ADDRESS')
-    || process.env.USDC_ADDRESS;
-  if (!usdcAddress) throw new Error(`USDC address not configured for chain: ${chainId}`);
+  // Resolve the per-protocol USDC address (not the global chain-level one)
+  if (!toAdapter.resolveUsdc) throw new Error(`Protocol "${to}" does not support resolveUsdc()`);
+  const usdcAddress = await toAdapter.resolveUsdc({ signer });
+  if (!usdcAddress) throw new Error(`Cannot resolve USDC address for protocol "${to}"`);
 
   const usdc = new ethers.Contract(usdcAddress, ERC20_ABI, signer);
   const decimals = await usdc.decimals();
   const amount = await usdc.balanceOf(agentAddress);
-  if (amount === 0n) throw new Error('No USDC available to supply');
+  if (amount === 0n) throw new Error('No idle USDC to supply');
 
+  // Adapter handles approve + supply internally
   const supplyReceipt = await toAdapter.supply({ signer, usdcAddress, amount });
 
   return {
@@ -87,4 +93,19 @@ export async function executeInitialSupply({ to, signer, chainId = 'sepolia' }) 
     to,
     amountUsdc: parseFloat(ethers.formatUnits(amount, decimals)).toFixed(2),
   };
+}
+
+/**
+ * Check if the agent currently has a live on-chain position in a given protocol.
+ * Delegates to the adapter's hasPosition() method.
+ * Returns false if the adapter doesn't support it or if the RPC call fails.
+ */
+export async function checkOnchainPosition({ protocol, signer }) {
+  const adapter = getProtocol(protocol);
+  if (!adapter?.hasPosition) return false;
+  try {
+    return await adapter.hasPosition({ signer });
+  } catch {
+    return false;
+  }
 }

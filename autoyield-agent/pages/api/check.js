@@ -11,6 +11,7 @@ import { readStateForUser, writeStateForUser } from './state.js';
 import { readRulesForUser } from './rules.js';
 import { sendApprovalMessage } from '../../lib/telegramBot.js';
 import { explainDecision, fallbackExplanation } from '../../lib/ai.js';
+import { checkOnchainPosition } from '../../lib/executor.js';
 
 // Simple in-memory rate limiter: 1 manual check per user/IP per 60 seconds
 const rateLimitMap = new Map(); // key → lastCalledMs
@@ -57,7 +58,23 @@ export default async function handler(req, res) {
     const gasCostUsd = await estimateGasCostUsd();
 
     const stateWithBalance = { ...state, userBalance: usdcBalance };
-    const decision = runDecisionEngine({ state: stateWithBalance, aprSnapshot, history, rules, gasCostUsd });
+
+    // ── On-chain position detection ──────────────────────────────────────────
+    // Check whether the agent truly has a live position on-chain.
+    // This overrides potentially stale state (e.g. after manual withdrawal).
+    let hasOnchainPosition = null;
+    try {
+      if (state.currentProtocol && state.currentProtocol !== 'none') {
+        hasOnchainPosition = await checkOnchainPosition({ protocol: state.currentProtocol, signer });
+      } else {
+        hasOnchainPosition = false; // no protocol in state → definitely no position
+      }
+    } catch {
+      // RPC error: fall back to state-based detection inside engine
+      hasOnchainPosition = null;
+    }
+
+    const decision = runDecisionEngine({ state: stateWithBalance, aprSnapshot, history, rules, gasCostUsd, hasOnchainPosition });
 
     // ── AI explain (Feature B) ─────────────────────────────────────────────────
     // Run regardless of action so the UI always gets an explanation.
@@ -75,7 +92,7 @@ export default async function handler(req, res) {
       aiExplanation = fallbackExplanation(decision);
     }
 
-    if (decision.action === 'ROTATE') {
+    if (decision.action === 'ROTATE' || decision.action === 'INITIAL_SUPPLY') {
       // Add expiry for Telegram security (30 min window)
       const decisionWithExpiry = { ...decision, expiresAt: Date.now() + 30 * 60 * 1000, userId };
       writeStateForUser(userId, { ...state, pendingApproval: decisionWithExpiry });
@@ -88,7 +105,6 @@ export default async function handler(req, res) {
       if (rules.executionMode === 'auto') {
         const { executeApproval } = await import('./approve.js');
         await executeApproval(decisionWithExpiry, state, usdcBalance, signer, userId);
-        // chainId resolved inside executeApproval via getAgentWallet(userId)
       }
     }
 

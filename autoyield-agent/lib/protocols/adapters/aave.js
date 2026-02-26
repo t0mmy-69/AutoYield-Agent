@@ -8,7 +8,12 @@ const POOL_ABI = [
   'function withdraw(address asset, uint256 amount, address to) returns (uint256)',
 ];
 
-const ERC20_ABI = ['function decimals() view returns (uint8)'];
+const ERC20_ABI = [
+  'function decimals() view returns (uint8)',
+  'function balanceOf(address owner) view returns (uint256)',
+];
+
+const ATOKEN_ABI = ['function balanceOf(address) view returns (uint256)'];
 
 const RAY = BigInt('1000000000000000000000000000'); // 1e27
 
@@ -57,6 +62,20 @@ export function createAaveAdapter(config) {
       }
     },
 
+    async resolveUsdc() {
+      return usdcAddress;
+    },
+
+    async hasPosition({ signer }) {
+      try {
+        const pool = new ethers.Contract(contractAddress, POOL_ABI, signer.provider);
+        const data = await pool.getReserveData(await this.resolveUsdc());
+        const aToken = new ethers.Contract(data.aTokenAddress, ATOKEN_ABI, signer.provider);
+        const bal = await aToken.balanceOf(await signer.getAddress());
+        return bal > 0n;
+      } catch { return false; }
+    },
+
     async supply({ signer, usdcAddress: supplyUsdc, amount }) {
       const erc20 = new ethers.Contract(supplyUsdc, ERC20_ABI, signer);
       const decimals = await erc20.decimals();
@@ -103,6 +122,20 @@ export const aaveAdapter = {
       console.error('[AAVE getAPR error]', err?.message ?? err);
       return null; // never fake data — let UI show "APR unavailable"
     }
+  },
+
+  async resolveUsdc() {
+    return getCredential('AAVE_USDC_ADDRESS') || AAVE_SEPOLIA_USDC;
+  },
+
+  async hasPosition({ signer }) {
+    try {
+      const pool = new ethers.Contract(this.getContractAddress(), POOL_ABI, signer.provider);
+      const data = await pool.getReserveData(await this.resolveUsdc());
+      const aToken = new ethers.Contract(data.aTokenAddress, ATOKEN_ABI, signer.provider);
+      const bal = await aToken.balanceOf(await signer.getAddress());
+      return bal > 0n;
+    } catch { return false; }
   },
 
   async supply({ signer, usdcAddress, amount }) {

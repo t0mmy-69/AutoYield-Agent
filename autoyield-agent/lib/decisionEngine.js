@@ -19,14 +19,16 @@ function randomDecisionId() {
  * Case 1 (INITIAL_SUPPLY): No active position + idle balance → supply immediately.
  * Case 2 (ROTATE / NOOP): Already supplied → evaluate whether to rotate.
  */
-export function runDecisionEngine({ state, aprSnapshot, history, rules, gasCostUsd }) {
+export function runDecisionEngine({ state, aprSnapshot, history, rules, gasCostUsd, hasOnchainPosition = null }) {
   const { aprs, best: target, bestAPR: targetAPR } = aprSnapshot;
   const { currentProtocol, lastMoveTimestamp } = state;
   const userBalance = state.userBalance || 0;
 
   // ── Case 1: No active position — supply idle capital immediately ─────────
-  const hasActivePosition = currentProtocol && currentProtocol !== 'none';
+  // Prefer on-chain truth if available; fall back to state (handles RPC outage gracefully)
+  const hasActivePosition = hasOnchainPosition ?? (currentProtocol && currentProtocol !== 'none');
   const minCapital = rules.minCapital ?? 1; // minimum USDC to bother supplying
+
 
   if (!hasActivePosition) {
     if (userBalance < minCapital) {

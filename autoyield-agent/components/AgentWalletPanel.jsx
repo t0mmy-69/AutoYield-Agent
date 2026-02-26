@@ -1,5 +1,11 @@
 import { useState } from 'react';
+import { ethers } from 'ethers';
 import dappStyles from '../styles/Dapp.module.css';
+
+const ERC20_ABI = [
+  'function transfer(address to, uint256 amount) returns (bool)',
+  'function decimals() view returns (uint8)',
+];
 
 function copyToClipboard(text) {
   try {
@@ -59,23 +65,15 @@ export default function AgentWalletPanel({ agentAddress, usdcBalance, currentPro
       const info = await infoRes.json();
       if (!info.usdcAddress) throw new Error('USDC address not configured on server.');
 
-      // Switch to correct chain if needed
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      const from = accounts[0];
+      // Use ethers.js Contract to call transfer()
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const contract = new ethers.Contract(info.usdcAddress, ERC20_ABI, signer);
 
-      // Encode USDC transfer(to, amount)
-      // decimals = 6 for USDC
-      const decimals = 6;
-      const amountInt = Math.floor(parseFloat(depositAmount) * 10 ** decimals);
-      const amountHex = '0x' + amountInt.toString(16).padStart(64, '0');
-      const toHex = info.agentAddress.slice(2).toLowerCase().padStart(64, '0');
-      const data = '0xa9059cbb' + toHex + amountHex;
-
-      const txHash = await window.ethereum.request({
-        method: 'eth_sendTransaction',
-        params: [{ from, to: info.usdcAddress, data, gas: '0x186A0' }],
-      });
-      setDepositMsg({ ok: true, text: `Deposit sent! TX: ${txHash.slice(0, 10)}...` });
+      const decimals = await contract.decimals();
+      const amount = ethers.parseUnits(depositAmount, decimals);
+      const tx = await contract.transfer(info.agentAddress, amount);
+      setDepositMsg({ ok: true, text: `Deposit sent! TX: ${tx.hash.slice(0, 10)}...` });
       setDepositAmount('');
       setTimeout(() => { setDepositMsg(null); onRefresh?.(); }, 4000);
     } catch (e) {
